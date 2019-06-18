@@ -48,7 +48,7 @@ function getInstanceId (serverName) {
 		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName +'" --query "Reservations[0].Instances[0].InstanceId"')
 		.then(async (instanceId) => {
 			if (instanceId.object === null) {
-				reject('Call the Admin we failed to get an instance ID!');
+				reject(instanceId);
 			} else {
 				resolve(instanceId.object);
 			}
@@ -63,7 +63,7 @@ async function startInstance (serverName) {
 		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
 		.then(async (server_status) => {
 			if (server_status.object != null) {
-				reject("Server is already running, try \"!ip\" instead");
+				reject(server_status);
 			} else {
 				// create spot instance and tag it
 				aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
@@ -160,7 +160,7 @@ function startGameServer (instanceId) {
 				await sleep(10000);
 			}
 		}
-		resolve('Starting the game server now! please wait... (wont tell you when its done so just check in 3ish min)');
+		resolve();
 	});
 }
 
@@ -176,10 +176,10 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         	case 'help':
         		bot.sendMessage({
                     to: channelID,
-                    message: 'Hi, Heres the current list of commands:\n!status\n!start\nAlso their are 3 easter egg commands. Can you find them all?'
+                    message: 'Hi, Heres the current list of commands:\n!status\n!ip\nAlso their are 3 easter egg commands. Can you find them all?'
                 });
         	break;
-            case 'status':
+            case 'ip':
             	getIp('mcm_server', function(ip) {
             		if (ip === null) {
             			bot.sendMessage({
@@ -189,7 +189,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             		} else {
 	            		bot.sendMessage({
 		                    to: channelID,
-		                    message: 'The server is up! Heres the IP: ' + ip
+		                    message: 'You ask and you shall receive!\n' + ip
 		            	});
             		}
             	});
@@ -216,28 +216,24 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 						.then((resolved) => {
 							bot.sendMessage({
 		            			to: channelID,
-		            			message: resolved
+		            			message: 'Starting the game server now! please wait... (wont tell you when its done so just check in 3ish min)'
             				});
             				bot.sendMessage({
 		            			to: channelID,
 		            			message: '!ip'
             				});
-						}).catch((error) => {
-							bot.sendMessage({
-		            			to: channelID,
-		            			message: error
-            				});
-						});
             		}).catch((error) => {
+            			console.log(error);
             			bot.sendMessage({
 	            			to: channelID,
-	            			message: error
+	            			message: 'Call the Admin we failed to get an instance ID!'
             			});
             		});
             	}).catch((error) => {
+            		console.log(error);
             		bot.sendMessage({
             			to: channelID,
-            			message: error
+            			message: "Server is already running, try \"!ip\" instead"
             		});
             	});
             break;
