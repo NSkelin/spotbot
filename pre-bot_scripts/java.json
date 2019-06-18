@@ -1,0 +1,11 @@
+{
+	"commands": [
+		"sudo java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
+	],
+	"executionTimeout": [
+		"86400"
+	],
+	"workingDirectory": [
+		"/home/ec2-user/minecraft_server"
+	]
+}

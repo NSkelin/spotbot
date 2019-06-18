@@ -1,0 +1,17 @@
+{
+  "name": "spotbot",
+  "version": "0.0.1",
+  "description": "SpotBot integrates amazon web services to help you easily create and host a personal game server for you and your friends!",
+  "main": "spotbot.js",
+  "dependencies": {
+    "aws-cli-js": "^2.0.5",
+    "discord.io": "^2.5.3",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nicholas Skelin",
+  "license": "ISC"
+}

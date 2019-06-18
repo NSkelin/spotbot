@@ -1,0 +1,1 @@
+aws ec2 describe-instances --filter "Name=tag:Name,Values=mcm_server" --query "Reservations[0].Instances[0].PublicIpAddress"
