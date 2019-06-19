@@ -57,23 +57,32 @@ function getInstanceId (serverName) {
 }
 
 // starts a spot instance and tags it
-async function startInstance (serverName) {
+function startInstance (serverName) {
 	// ##### Start Spot Instance #####
 	return new Promise((resolve, reject) => {
 		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
-		.then(async (server_status) => {
-			if (server_status.object != null) {
-				reject(server_status);
-			} else {
-				// create spot instance and tag it
-				aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
-				await sleep(3500);
-				aws.command('ec2 describe-instances --filter "Name=instance-state-name,Values=pending" --query "Reservations[0].Instances[0].InstanceId"')
-				.then((instanceId) => {
-					aws.command('ec2 create-tags --resource ' + instanceId.object + ' --tags Key=Name,Value=' + serverName)
-					resolve('Computer powering on!...');
-				});			
+		.then(async (serverStatus) => {
+			// check if the server is still running and if it is exit
+			// if its not but it still has the tag name remove the tag
+			if (serverStatus.object != null) {
+				var state = serverStatus.object.Instances[0].State.Name
+				if (state != "running" || state != "pending") {
+					getInstanceId(serverName)
+					.then((instanceId) => {
+						aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName)
+					});
+				} else {
+					reject(serverStatus);
+				}
 			}
+			// create spot instance and tag it
+			aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
+			await sleep(3500); // wait for amazon
+			aws.command('ec2 describe-instances --filter "Name=instance-state-name,Values=pending" --query "Reservations[0].Instances[0].InstanceId"')
+			.then((instanceId) => {
+				aws.command('ec2 create-tags --resource ' + instanceId.object + ' --tags Key=Name,Value=' + serverName)
+				resolve();
+			});					
 		});
 	});
 
@@ -176,7 +185,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         	case 'help':
         		bot.sendMessage({
                     to: channelID,
-                    message: 'Hi, Heres the current list of commands:\n!status\n!ip\nAlso their are 3 easter egg commands. Can you find them all?'
+                    message: 'Hi, Heres the current list of commands:\n!start\n!ip\nAlso their are 3 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
@@ -194,7 +203,6 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             		}
             	});
             break;
-            // display ip when done too
             case 'start':
         		bot.sendMessage({
         			to: channelID,
@@ -204,7 +212,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             	.then(async (resolved) => {
             		bot.sendMessage({
             			to: channelID,
-            			message: resolved
+            			message: 'Computer powering on!...'
             		});
             		await sleep(3000); // wait for aws to add the tag name to get an instance id
             		getInstanceId('mcm_server')
@@ -216,12 +224,13 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 						.then((resolved) => {
 							bot.sendMessage({
 		            			to: channelID,
-		            			message: 'Starting the game server now! please wait... (wont tell you when its done so just check in 3ish min)'
+		            			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
             				});
             				bot.sendMessage({
 		            			to: channelID,
 		            			message: '!ip'
             				});
+            			});
             		}).catch((error) => {
             			console.log(error);
             			bot.sendMessage({
@@ -236,6 +245,9 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             			message: "Server is already running, try \"!ip\" instead"
             		});
             	});
+            break;
+            case 'status':
+            
             break;
             // easter eggs
             case 'ping':
@@ -256,6 +268,11 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     message: 'Eunk bwonoes'
                 });
             break;
+     		default:
+     			bot.sendMessage({
+                    to: channelID,
+                    message: 'Unknown command! try "!help" for a list of commands.'
+                });
             // make half a heart and bot replys with other half
          }
      }

@@ -40,7 +40,7 @@ aws ec2 terminate-instances --instance-ids <value>
 sudo systemctl restart amazon-ssm-agent
 
 // send command from aws cli to instances
-aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-08fd4859a318521e2" --parameters '{"commands":["aws s3 cp s3://mc-server-a00912617/mcm_server ./minecraft_server --recursive"],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user"]}' --timeout-seconds 600 --region us-west-2
+aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-05c740b57558b86d9" --parameters '{"commands":["aws s3 cp s3://mc-server-a00912617/mcm_server ./minecraft_server --recursive"],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user"]}' --timeout-seconds 600 --region us-west-2
 
 // create a tag for the instance
 aws ec2 create-tags --resource ${ID} --tags Key=Name,Value=mcm_server
