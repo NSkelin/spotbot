@@ -66,13 +66,14 @@ function startInstance (serverName) {
 			// if its not but it still has the tag name remove the tag
 			if (serverStatus.object != null) {
 				var state = serverStatus.object.Instances[0].State.Name
-				if (state != "running" || state != "pending") {
+				if (state === "shutting-down" || state === "terminated") {
 					getInstanceId(serverName)
 					.then((instanceId) => {
 						aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName)
 					});
 				} else {
 					reject(serverStatus);
+					return
 				}
 			}
 			// create spot instance and tag it
@@ -82,10 +83,9 @@ function startInstance (serverName) {
 			.then((instanceId) => {
 				aws.command('ec2 create-tags --resource ' + instanceId.object + ' --tags Key=Name,Value=' + serverName)
 				resolve();
-			});					
+			});
 		});
 	});
-
 }
 // creates a cloud watch alarm that terminates the instance if networkOut is below threshold (aka no players connected)
 function createShutdownAlarm (instanceId) {
