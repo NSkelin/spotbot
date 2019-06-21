@@ -30,6 +30,7 @@ var options = new Options(
 );
 var aws = new Aws(options);
 const  s3BucketName = "mc-server-a00912617";
+const startInstanceFunctionActive = false;
 function sleep (ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -59,33 +60,42 @@ function getInstanceId (serverName) {
 // starts a spot instance and tags it
 function startInstance (serverName) {
 	// ##### Start Spot Instance #####
-	return new Promise((resolve, reject) => {
-		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
-		.then(async (serverStatus) => {
-			// check if the server is still running and if it is exit
-			// if its not but it still has the tag name remove the tag
-			if (serverStatus.object != null) {
-				var state = serverStatus.object.Instances[0].State.Name
-				if (state === "shutting-down" || state === "terminated") {
-					getInstanceId(serverName)
-					.then((instanceId) => {
-						aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName)
-					});
-				} else {
-					reject(serverStatus);
-					return
+	// figure out queues or someway to only allow one person to run this function at a time
+	if (startInstanceFunctionActive) {
+		reject('Server is already being started');
+		return
+	} else {
+		startInstanceFunctionActive = true;
+		return new Promise((resolve, reject) => {
+			aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
+			.then(async (serverStatus) => {
+				// checks if the server is still running and if it is exit
+				// if its not but it still has the tag name remove the tag
+				if (serverStatus.object != null) {
+					var state = serverStatus.object.Instances[0].State.Name
+					if (state === "shutting-down" || state === "terminated") {
+						getInstanceId(serverName)
+						.then((instanceId) => {
+							aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName)
+						});
+					} else {
+						reject(serverStatus);
+						startInstanceFunctionActive = false;
+						return
+					}
 				}
-			}
-			// create spot instance and tag it
-			aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
-			await sleep(3500); // wait for amazon
-			aws.command('ec2 describe-instances --filter "Name=instance-state-name,Values=pending" --query "Reservations[0].Instances[0].InstanceId"')
-			.then((instanceId) => {
-				aws.command('ec2 create-tags --resource ' + instanceId.object + ' --tags Key=Name,Value=' + serverName)
-				resolve();
+				// create spot instance and tag it
+				aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
+				await sleep(3500); // wait for amazon
+				aws.command('ec2 describe-instances --filter "Name=instance-state-name,Values=pending" --query "Reservations[0].Instances[0].InstanceId"')
+				.then((instanceId) => {
+					aws.command('ec2 create-tags --resource ' + instanceId.object + ' --tags Key=Name,Value=' + serverName)
+					startInstanceFunctionActive = false;
+					resolve();
+				});
 			});
 		});
-	});
+	}
 }
 // creates a cloud watch alarm that terminates the instance if networkOut is below threshold (aka no players connected)
 function createShutdownAlarm (instanceId) {
