@@ -30,7 +30,7 @@ var options = new Options(
 );
 var aws = new Aws(options);
 const  s3BucketName = "mc-server-a00912617";
-const startInstanceFunctionActive = false;
+var startInstanceFunctionActive = false;
 function sleep (ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -60,13 +60,13 @@ function getInstanceId (serverName) {
 // starts a spot instance and tags it
 function startInstance (serverName) {
 	// ##### Start Spot Instance #####
-	// figure out queues or someway to only allow one person to run this function at a time
-	if (startInstanceFunctionActive) {
-		reject('Server is already being started');
-		return
-	} else {
-		startInstanceFunctionActive = true;
-		return new Promise((resolve, reject) => {
+	return new Promise((resolve, reject) => {
+		// figure out queues or someway to only allow one person to run this function at a time
+		if (startInstanceFunctionActive) {
+			reject('Server is already being started');
+			return
+		} else {
+			startInstanceFunctionActive = true;
 			aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
 			.then(async (serverStatus) => {
 				// checks if the server is still running and if it is exit
@@ -94,8 +94,8 @@ function startInstance (serverName) {
 					resolve();
 				});
 			});
-		});
-	}
+		}
+	});
 }
 // creates a cloud watch alarm that terminates the instance if networkOut is below threshold (aka no players connected)
 function createShutdownAlarm (instanceId) {
