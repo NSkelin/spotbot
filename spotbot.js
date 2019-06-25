@@ -58,33 +58,44 @@ function getInstanceId (serverName) {
 		});
 	})
 }
+// checks if the instance is running or not
+function checkInstanceRunning (serverName) {
+	return new Promise((resolve, reject) => {
+		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
+		.then((serverStatus) => {
+			// checks if the instance with serverName exists. If it does but is terminated or shutting down it removes the servers tag name (serverName)
+			if (serverStatus.object != null) {
+				var state = serverStatus.object.Instances[0].State.Name
+				if (state === "shutting-down" || state === "terminated") {
+					getInstanceId(serverName)
+					.then((instanceId) => {
+						aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName);
+					});
+					resolve();
+					return
+				} else {
+					reject();
+					return
+				}
+			} else {
+				resolve();
+			}
+		});
+	});
+}
 // starts a spot instance and tags it
 function startInstance (serverName) {
 	// ##### Start Spot Instance #####
 	return new Promise((resolve, reject) => {
 		// figure out queues or someway to only allow one person to run this function at a time
+		// is this function already running? reject if true, else continue
 		if (startInstanceFunctionActive) {
 			reject('Server is already being started');
 			return
 		} else {
 			startInstanceFunctionActive = true;
-			aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
-			.then(async (serverStatus) => {
-				// checks if the server is still running and if it is exit
-				// if its not but it still has the tag name remove the tag
-				if (serverStatus.object != null) {
-					var state = serverStatus.object.Instances[0].State.Name
-					if (state === "shutting-down" || state === "terminated") {
-						getInstanceId(serverName)
-						.then((instanceId) => {
-							aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + serverName)
-						});
-					} else {
-						reject(serverStatus);
-						startInstanceFunctionActive = false;
-						return
-					}
-				}
+			checkInstanceRunning(serverName)
+			.then(async() => {
 				// create spot instance and tag it
 				aws.command('ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json');
 				await sleep(3500); // wait for amazon
@@ -94,6 +105,8 @@ function startInstance (serverName) {
 					startInstanceFunctionActive = false;
 					resolve();
 				});
+			}).catch(() => {
+				reject('The computer is already on try !status or !ip');
 			});
 		}
 	});
@@ -181,8 +194,8 @@ function startGameServer (instanceId) {
 		resolve();
 	});
 }
-function getStatus (instanceId) {
-	return new Promise((resolve, reject) => {
+function getStatus (instanceId, serverName) {
+	return new Promise(async(resolve, reject) => {
 		aws.command('ssm send-command '+
 			'--document-name "AWS-RunShellScript" '+
 			'--comment "Copy data to S3 as backup / save" '+
