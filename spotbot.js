@@ -43,20 +43,21 @@ function getIp (serverName, callback) {
 		callback(data.object);
 	});
 }
-
+// gets a instance id based on the tag name
 function getInstanceId (serverName) {
 	return new Promise((resolve, reject) => {
-		aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName +'" --query "Reservations[0].Instances[0].InstanceId"')
+		aws.command('ec2 describe-instances '+
+		'--filter "Name=tag:Name,Values=' + serverName +
+		'" --query "Reservations[0].Instances[0].InstanceId"')
 		.then(async (instanceId) => {
 			if (instanceId.object === null) {
-				reject(instanceId);
+				reject('The server isnt up, try !start.');
 			} else {
 				resolve(instanceId.object);
 			}
 		});
 	})
 }
-
 // starts a spot instance and tags it
 function startInstance (serverName) {
 	// ##### Start Spot Instance #####
@@ -113,7 +114,6 @@ function createShutdownAlarm (instanceId) {
 	--namespace "AWS/EC2" \
 	--statistic "Average"')
 }
-
 // creates amazon rules / events to handle backipng up the game server files
 function createBackupEvents (instanceId) {
 	// backup periodically (30min)
@@ -150,7 +150,6 @@ function createBackupEvents (instanceId) {
 		'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 	});
 }	
-
 // loads the games files onto the instance and then runs them.
 function startGameServer (instanceId) {
 	return new Promise(async function(resolve) {
@@ -182,7 +181,65 @@ function startGameServer (instanceId) {
 		resolve();
 	});
 }
-
+function getStatus (instanceId) {
+	return new Promise((resolve, reject) => {
+		aws.command('ssm send-command '+
+			'--document-name "AWS-RunShellScript" '+
+			'--comment "Copy data to S3 as backup / save" '+
+			'--instance-ids '+ instanceId +' '+
+			'--parameters \'{"commands": ["pgrep java"]}\' '+
+			'--region us-west-2 '+
+			'--query "Command.CommandId"')
+		.then(async(cmdId)=> {
+			console.log('cmd1 -----------');
+			console.log(cmdId.object);
+			await sleep(1000) // fails if too fast sometimes so wait 1 second
+			aws.command('ssm get-command-invocation '+
+			'--command-id '+ cmdId.object +' '+
+			'--instance-id '+ instanceId +' '+
+			'--query "StandardOutputContent" '+
+			'--output text')
+			.then((pidId) => {
+				console.log('pid1 -----------');
+				console.log(pidId.object);
+				if (!/^\d+$/.test(pidId.object)) {
+					reject('Computer is on but the server isnt!? Try !restart.')
+					return
+				} else {
+					aws.command('ssm send-command '+
+					'--document-name "AWS-RunShellScript" '+
+					'--comment "Copy data to S3 as backup / save" '+
+					'--instance-ids '+ instanceId +' '+
+					'--parameters \'{"commands": ["ps -o etimes= -p '+pidId.object+'"]}\' '+
+					'--region us-west-2 '+
+					'--query "Command.CommandId"')
+					.then((cmdId2) => {
+						console.log('cmd2 -----------');
+						console.log(cmdId2.object);
+						aws.command('ssm get-command-invocation '+
+						'--command-id '+ cmdId2.object +' '+
+						'--instance-id '+ instanceId +' '+
+						'--query "StandardOutputContent"')
+						.then((pidId2) => {
+							console.log('pid2 -----------');
+							console.log(pidId2.object);
+							var t = pidId2.object.trim();
+							t = Number(t)
+							if (t > 300) {
+								resolve('Great news! both the computer and server are on!');
+								return
+							} else {
+								resolve('Great news! both the computer and server are on\n'+
+								'However the server has been online for less than 5 minutes so give it some time if you cant join immediately!');
+								return
+							}	
+						});
+					});				
+				}
+			});
+		});
+	});
+}
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`
@@ -195,7 +252,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         	case 'help':
         		bot.sendMessage({
                     to: channelID,
-                    message: 'Hi, Heres the current list of commands:\n!start\n!ip\nAlso their are 3 easter egg commands. Can you find them all?'
+                    message: 'Hi, Heres the current list of commands:\n!start\n!ip\n!status\nAlso their are 3 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
@@ -257,7 +314,30 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             	});
             break;
             case 'status':
-            
+	            bot.sendMessage({
+	                to: channelID,
+	                message: 'Searching!'
+	        	});
+	            getInstanceId('mcm_server')
+	            .then((instanceId) => {
+	            	getStatus(instanceId)
+	            	.then((successMsg) => {
+	            		bot.sendMessage({
+			                to: channelID,
+			                message: successMsg
+			        	});
+	            	}).catch((errorMsg) => {
+	            		bot.sendMessage({
+			                to: channelID,
+			                message: errorMsg
+	        			});
+	            	})
+	            }).catch((errorMsg) => {
+	            	bot.sendMessage({
+	                    to: channelID,
+	                    message: errorMsg
+	                });
+	            })
             break;
             // easter eggs
             case 'ping':
