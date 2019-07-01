@@ -196,61 +196,75 @@ function startGameServer (instanceId) {
 }
 function getStatus (instanceId, serverName) {
 	return new Promise(async(resolve, reject) => {
-		aws.command('ssm send-command '+
-			'--document-name "AWS-RunShellScript" '+
-			'--comment "Copy data to S3 as backup / save" '+
-			'--instance-ids '+ instanceId +' '+
-			'--parameters \'{"commands": ["pgrep java"]}\' '+
-			'--region us-west-2 '+
-			'--query "Command.CommandId"')
-		.then(async(cmdId)=> {
-			console.log('cmd1 -----------');
-			console.log(cmdId.object);
-			await sleep(1000) // fails if too fast sometimes so wait 1 second
-			aws.command('ssm get-command-invocation '+
-			'--command-id '+ cmdId.object +' '+
-			'--instance-id '+ instanceId +' '+
-			'--query "StandardOutputContent" '+
-			'--output text')
-			.then((pidId) => {
-				console.log('pid1 -----------');
-				console.log(pidId.object);
-				if (!/^\d+$/.test(pidId.object)) {
-					reject('Computer is on but the server isnt!? Try !restart.')
-					return
-				} else {
-					aws.command('ssm send-command '+
-					'--document-name "AWS-RunShellScript" '+
-					'--comment "Copy data to S3 as backup / save" '+
-					'--instance-ids '+ instanceId +' '+
-					'--parameters \'{"commands": ["ps -o etimes= -p '+pidId.object+'"]}\' '+
-					'--region us-west-2 '+
-					'--query "Command.CommandId"')
-					.then((cmdId2) => {
-						console.log('cmd2 -----------');
-						console.log(cmdId2.object);
+		if (startInstanceFunctionActive) {
+			reject('The "!start" command is active! please wait for it to finish...')
+			return
+		} else {
+			aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + serverName + '" --query Reservations[0]')
+			.then((serverStatus) => {
+				var state = serverStatus.object.Instances[0].State.Name
+				if (state === "shutting-down" || state === "terminated") {
+						reject('Computer is offline, try !start.')
+						return
+					} else {
+						aws.command('ssm send-command '+
+						'--document-name "AWS-RunShellScript" '+
+						'--comment "Copy data to S3 as backup / save" '+
+						'--instance-ids '+ instanceId +' '+
+						'--parameters \'{"commands": ["pgrep java"]}\' '+
+						'--region us-west-2 '+
+						'--query "Command.CommandId"')
+					.then(async(cmdId)=> {
+						console.log('cmd1 -----------');
+						console.log(cmdId.object);
+						await sleep(1000) // fails if too fast sometimes so wait 1 second
 						aws.command('ssm get-command-invocation '+
-						'--command-id '+ cmdId2.object +' '+
+						'--command-id '+ cmdId.object +' '+
 						'--instance-id '+ instanceId +' '+
-						'--query "StandardOutputContent"')
-						.then((pidId2) => {
-							console.log('pid2 -----------');
-							console.log(pidId2.object);
-							var t = pidId2.object.trim();
-							t = Number(t)
-							if (t > 300) {
-								resolve('Great news! both the computer and server are on!');
+						'--query "StandardOutputContent" '+
+						'--output text')
+						.then((pidId) => {
+							console.log('pid1 -----------');
+							console.log(pidId.object);
+							if (!/^\d+$/.test(pidId.object)) {
+								reject('Computer is on but the server isnt!? Try !restart.')
 								return
 							} else {
-								resolve('Great news! both the computer and server are on\n'+
-								'However the server has been online for less than 5 minutes so give it some time if you cant join immediately!');
-								return
-							}	
+								aws.command('ssm send-command '+
+								'--document-name "AWS-RunShellScript" '+
+								'--comment "Copy data to S3 as backup / save" '+
+								'--instance-ids '+ instanceId +' '+
+								'--parameters \'{"commands": ["ps -o etimes= -p '+pidId.object+'"]}\' '+
+								'--region us-west-2 '+
+								'--query "Command.CommandId"')
+								.then((cmdId2) => {
+									console.log('cmd2 -----------');
+									console.log(cmdId2.object);
+									aws.command('ssm get-command-invocation '+
+									'--command-id '+ cmdId2.object +' '+
+									'--instance-id '+ instanceId +' '+
+									'--query "StandardOutputContent"')
+									.then((pidId2) => {
+										console.log('pid2 -----------');
+										console.log(pidId2.object);
+										var t = pidId2.object.trim();
+										t = Number(t)
+										if (t > 300) {
+											resolve('Great news! both the computer and server are on!');
+											return
+										} else {
+											resolve('Great news! both the computer and server are on\n'+
+											'However the server has been online for less than 5 minutes so give it some time if you cant join immediately!');
+											return
+										}	
+									});
+								});				
+							}
 						});
-					});				
+					});
 				}
 			});
-		});
+		}
 	});
 }
 bot.on('message', function (user, userID, channelID, message, evt) {
@@ -278,7 +292,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             		} else {
 	            		bot.sendMessage({
 		                    to: channelID,
-		                    message: 'You ask and you shall receive!\n' + ip
+		                    message: ip
 		            	});
             		}
             	});
@@ -333,7 +347,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	        	});
 	            getInstanceId('mcm_server')
 	            .then((instanceId) => {
-	            	getStatus(instanceId)
+	            	getStatus(instanceId, 'mcm_server')
 	            	.then((successMsg) => {
 	            		bot.sendMessage({
 			                to: channelID,
@@ -351,6 +365,12 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	                    message: errorMsg
 	                });
 	            })
+            break;
+            case 'restart':
+            bot.sendMessage({
+            	to: channelID,
+            	message: 'yeah i know i havent created this command yet.'
+            })
             break;
             // easter eggs
             case 'ping':
