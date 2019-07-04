@@ -312,7 +312,9 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         	case 'help':
         		bot.sendMessage({
                     to: channelID,
-                    message: 'Hi, Heres the current list of commands:\n!start\n!ip\n!status\nAlso their are 3 easter egg commands. Can you find them all?'
+                    message: 'Hi, Heres the current list of commands:\n'+
+                    '!start\n!ip\n!status\n!servers\n!restart\n'+
+                    'Also their are 3 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
@@ -343,7 +345,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 if (args[1] === undefined) {
             		bot.sendMessage({
 	                    to: channelID,
-	                    message: 'Please enter a server (ex "!ip mcm_server") or type "!servers" for a list of servers'
+	                    message: 'Please enter a server (ex "!start mcm_server") or type "!servers" for a list of servers'
 	            	});
             	} else {
             		checkForServer(args[1])
@@ -352,14 +354,14 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 		        			to: channelID,
 		        			message: 'Acknowledged Captain! Were getting ready...'
 		        		});
-		        		return startInstance('mcm_server')
+		        		return startInstance(args[1])
 		        	}).then(async(resolved) => {
 						bot.sendMessage({
 	            			to: channelID,
 	            			message: 'Computer powering on!...'
 	            		});
 	            		await sleep(3000); // wait for aws to add the tag name to get an instance id
-	            		return getInstanceId('mcm_server')
+	            		return getInstanceId(args[1])
 	            	}).then((instanceId) => {
 						createShutdownAlarm(instanceId);
 	            		createBackupEvents(instanceId);
