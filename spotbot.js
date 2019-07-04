@@ -39,11 +39,18 @@ function sleep (ms) {
 }
 // user serverName var
 function getIp (serverName, callback) {
-	aws.command(
-	'ec2 describe-instances --filter "Name=tag:Name,Values=mcm_server" --query "Reservations[0].Instances[0].PublicIpAddress"')
-	.then(function (data) {
-		callback(data.object);
-	});
+	return new Promise((resolve, reject) => {
+		aws.command('ec2 describe-instances '+
+			'--filter "Name=tag:Name,Values=mcm_server" '+
+			'--query "Reservations[0].Instances[0].PublicIpAddress"')
+		.then(function (data) {
+			if (data.object === null) {
+				reject('We couldnt find an IP! the server probably isnt up, so try !start or !status');
+			} else {
+				resolve(data.object);	
+			}
+		});
+	})
 }
 // gets a instance id based on the tag name
 function getInstanceId (serverName) {
@@ -269,6 +276,32 @@ function getStatus (instanceId, serverName) {
 		}
 	});
 }
+// returns an array of strings. strings are the names of folders in a s3 bucket.
+function getServers () {
+	return new Promise((resolve) => {
+		aws.command('s3 ls s3://mc-server-a00912617').then((output) => {
+			var output = output.raw;
+			output = output.replace(/PRE| |\n/g,'');
+			output = output.slice(0,-1);
+			output = output.split('/');
+			resolve(output)
+		})
+	})
+}
+function checkForServer(serverName) {
+	return new Promise((resolve, reject) => {
+		getServers()
+		.then((servers) => {
+			for (i=0; i<servers.length; i++) {
+				if (serverName === servers[i]) {
+					resolve();
+					return
+				}
+			}
+			reject('Server doesnt exist, try !servers')
+		})
+	});
+}
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`
@@ -283,24 +316,26 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 });
         	break;
             case 'ip':
-            	if (args[1] === 'mcm_server') {
-            		getIp('mcm_server', function(ip) {
-	            		if (ip === null) {
-	            			bot.sendMessage({
-			                    to: channelID,
-			                    message: 'Server isnt up, try !start'
-			            	});
-	            		} else {
-		            		bot.sendMessage({
-			                    to: channelID,
-			                    message: ip
-			            	});
-	            		}
-	            	});
-            	} else {
+            	// if there is no input besides !ip then tell the user to enter a game
+            	if (args[1] === undefined) {
             		bot.sendMessage({
 	                    to: channelID,
-	                    message: 'invalid server try !games for a list of available games'
+	                    message: 'Please enter a server (ex "!ip mcm_server") or type "!servers" for a list of servers'
+	            	});
+            	} else {
+	            	checkForServer(args[1])
+	            	.then(() => {
+	            		return getIp('mcm_server')
+	            	}).then((ip) => {
+	            		bot.sendMessage({
+		                    to: channelID,
+		                    message: ip
+		            	});
+	            	}).catch((error) => {
+	            		bot.sendMessage({
+		                    to: channelID,
+		                    message: error
+		            	});
 	            	});
             	}
             break;
@@ -374,10 +409,10 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	            })
             break;
             case 'restart':
-            bot.sendMessage({
-            	to: channelID,
-            	message: 'yeah i know i havent created this command yet.'
-            })
+	            bot.sendMessage({
+	            	to: channelID,
+	            	message: 'yeah i know i havent created this command yet.'
+	            })
             break;
             // easter eggs
             case 'ping':
