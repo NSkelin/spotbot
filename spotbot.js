@@ -384,30 +384,33 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	            }
             break;
             case 'status':
-	            bot.sendMessage({
-	                to: channelID,
-	                message: 'Searching!'
-	        	});
-	            getInstanceId('mcm_server')
-	            .then((instanceId) => {
-	            	getStatus(instanceId, 'mcm_server')
-	            	.then((successMsg) => {
+	            if (args[1] === undefined) {
+	        		bot.sendMessage({
+	                    to: channelID,
+	                    message: 'Please enter a server (ex "!status mcm_server") or type "!servers" for a list of servers'
+	            	});
+	        	} else {
+	        		checkForServer(args[1])
+	        		.then(() => {
+	        			bot.sendMessage({
+			                to: channelID,
+			                message: 'Searching!'
+			        	});
+		            	return getInstanceId(args[1])
+	        		}).then((instanceId) => {
+		            	return getStatus(instanceId, args[1])
+		            }).then((successMsg) => {
 	            		bot.sendMessage({
 			                to: channelID,
 			                message: successMsg
 			        	});
-	            	}).catch((errorMsg) => {
-	            		bot.sendMessage({
-			                to: channelID,
-			                message: errorMsg
-	        			});
-	            	})
-	            }).catch((errorMsg) => {
-	            	bot.sendMessage({
-	                    to: channelID,
-	                    message: errorMsg
-	                });
-	            })
+		            }).catch((error) => {
+		            	bot.sendMessage({
+		                    to: channelID,
+		                    message: error
+		                });
+		            })
+		        }
             break;
             case 'restart':
 	            bot.sendMessage({
