@@ -340,47 +340,46 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             	}
             break;
             case 'start':
-        		bot.sendMessage({
-        			to: channelID,
-        			message: 'Acknowledged Captain! Were getting ready...'
-        		});
-            	startInstance('mcm_server')
-            	.then(async (resolved) => {
+                if (args[1] === undefined) {
             		bot.sendMessage({
-            			to: channelID,
-            			message: 'Computer powering on!...'
-            		});
-            		await sleep(3000); // wait for aws to add the tag name to get an instance id
-            		getInstanceId('mcm_server')
-            		.then((instanceId) => {
-            			createShutdownAlarm(instanceId);
-            			createBackupEvents(instanceId);
-
-						startGameServer(instanceId)
-						.then((resolved) => {
-							bot.sendMessage({
-		            			to: channelID,
-		            			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
-            				});
-            				bot.sendMessage({
-		            			to: channelID,
-		            			message: '!ip'
-            				});
-            			});
-            		}).catch((error) => {
-            			console.log(error);
-            			bot.sendMessage({
+	                    to: channelID,
+	                    message: 'Please enter a server (ex "!ip mcm_server") or type "!servers" for a list of servers'
+	            	});
+            	} else {
+            		checkForServer(args[1])
+            		.then(() => {
+		        		bot.sendMessage({
+		        			to: channelID,
+		        			message: 'Acknowledged Captain! Were getting ready...'
+		        		});
+		        		return startInstance('mcm_server')
+		        	}).then(async(resolved) => {
+						bot.sendMessage({
 	            			to: channelID,
-	            			message: 'Call the Admin we failed to get an instance ID!'
-            			});
-            		});
-            	}).catch((error) => {
-            		console.log(error);
-            		bot.sendMessage({
-            			to: channelID,
-            			message: "Server is already running, try \"!ip\" instead"
-            		});
-            	});
+	            			message: 'Computer powering on!...'
+	            		});
+	            		await sleep(3000); // wait for aws to add the tag name to get an instance id
+	            		return getInstanceId('mcm_server')
+	            	}).then((instanceId) => {
+						createShutdownAlarm(instanceId);
+	            		createBackupEvents(instanceId);
+	            		return startGameServer(instanceId)
+            		}).then((resolved) => {
+						bot.sendMessage({
+	            			to: channelID,
+	            			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
+        				});
+        				bot.sendMessage({
+	            			to: channelID,
+	            			message: '!ip ' + args[1]
+        				});
+            		}).catch((error) => {
+						bot.sendMessage({
+		        			to: channelID,
+		        			message: error
+		        		});
+	        		});
+	            }
             break;
             case 'status':
 	            bot.sendMessage({
