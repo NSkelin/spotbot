@@ -414,6 +414,25 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	            	message: 'yeah i know i havent created this command yet.'
 	            })
             break;
+            case 'servers':
+            	getServers()
+            	.then((servers) => {
+            		var msg = ''
+            		var n = 0
+            		for (i=0; i<servers.length; i++) {
+            			n += 1
+            			msg += servers[i] + '\t|\t'
+            			if (n === 5) {
+            				n = 0
+            				msg += '\n'
+            			}
+            		}
+            		bot.sendMessage({
+	        			to: channelID,
+	        			message: 'Heres the list of servers!\n|\t' + msg
+	        		});
+            	})
+            break;
             // easter eggs
             case 'ping':
                 bot.sendMessage({
