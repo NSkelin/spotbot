@@ -31,10 +31,12 @@ var options = new Options(
 var aws = new Aws(options);
 const  s3BucketName = "mc-server-a00912617";
 var startInstanceFunctionActive = false;
+// wait for x milliseconds
 function sleep (ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise(
+		resolve => setTimeout(resolve, ms)
+	);
 }
-
 // user serverName var
 function getIp (serverName, callback) {
 	aws.command(
@@ -273,8 +275,6 @@ bot.on('message', function (user, userID, channelID, message, evt) {
     if (message.substring(0, 1) == '!') {
         var args = message.substring(1).split(' ');
         var cmd = args[0];
-       
-        args = args.splice(1);
         switch(cmd) {
         	case 'help':
         		bot.sendMessage({
@@ -283,19 +283,26 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 });
         	break;
             case 'ip':
-            	getIp('mcm_server', function(ip) {
-            		if (ip === null) {
-            			bot.sendMessage({
-		                    to: channelID,
-		                    message: 'Server isnt up, try !start'
-		            	});
-            		} else {
-	            		bot.sendMessage({
-		                    to: channelID,
-		                    message: ip
-		            	});
-            		}
-            	});
+            	if (args[1] === 'mcm_server') {
+            		getIp('mcm_server', function(ip) {
+	            		if (ip === null) {
+	            			bot.sendMessage({
+			                    to: channelID,
+			                    message: 'Server isnt up, try !start'
+			            	});
+	            		} else {
+		            		bot.sendMessage({
+			                    to: channelID,
+			                    message: ip
+			            	});
+	            		}
+	            	});
+            	} else {
+            		bot.sendMessage({
+	                    to: channelID,
+	                    message: 'invalid server try !games for a list of available games'
+	            	});
+            	}
             break;
             case 'start':
         		bot.sendMessage({
