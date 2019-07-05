@@ -31,6 +31,7 @@ var options = new Options(
 var aws = new Aws(options);
 const  s3BucketName = "mc-server-a00912617";
 var startInstanceFunctionActive = false;
+const startCommands = require('./startCommands.json')
 // wait for x milliseconds
 function sleep (ms) {
 	return new Promise(
@@ -41,7 +42,7 @@ function sleep (ms) {
 function getIp (serverName, callback) {
 	return new Promise((resolve, reject) => {
 		aws.command('ec2 describe-instances '+
-			'--filter "Name=tag:Name,Values=mcm_server" '+
+			'--filter "Name=tag:Name,Values='+serverName+'" '+
 			'--query "Reservations[0].Instances[0].PublicIpAddress"')
 		.then(function (data) {
 			if (data.object === null) {
@@ -97,6 +98,7 @@ function startInstance (serverName) {
 	// ##### Start Spot Instance #####
 	return new Promise((resolve, reject) => {
 		// figure out queues or someway to only allow one person to run this function at a time
+
 		// is this function already running? reject if true, else continue
 		if (startInstanceFunctionActive) {
 			reject('Server is already being started');
@@ -109,7 +111,13 @@ function startInstance (serverName) {
 				aws.command('ec2 request-spot-instances '+
 					'--availability-zone-group us-west-2 '+
 					'--instance-count 1 '+
-					'--launch-specification file://specification.json');
+					'--launch-specification '+
+						'\'{"ImageId": "ami-0cb72367e98845d43",'+
+						'"KeyName": "Minecraft_Server",'+
+						'"SecurityGroupIds": [ "sg-07c25fbf12bf2e4a9" ],'+
+						'"InstanceType": "'+startCommands[serverName].instanceType+'",'+
+						'"IamInstanceProfile": {"Arn": "arn:aws:iam::392656794647:instance-profile/SSM-Agent"}}\''
+				);
 				await sleep(3500); // wait for amazon
 				return aws.command('ec2 describe-instances '+
 					'--filter "Name=instance-state-name,Values=pending" '+
@@ -119,74 +127,75 @@ function startInstance (serverName) {
 				startInstanceFunctionActive = false;
 				resolve();
 			}).catch(() => {
+				startInstanceFunctionActive = false;
 				reject('The computer is already on try !status or !ip');
 			});
 		}
 	});
 }
 // creates a cloud watch alarm that terminates the instance if networkOut is below threshold (aka no players connected)
-function createShutdownAlarm (instanceId) {
-	aws.command('cloudwatch put-metric-alarm \
-	--alarm-name "alarm when MCM server doesnt have anyone online for a time" \
-	--alarm-description "Automatically shutoff the server if no one is connected" \
-	--metric-name "NetworkOut" \
-	--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" \
-	--dimensions "Name=InstanceId,Value='+instanceId+'" \
-	--evaluation-periods "8" \
-	--datapoints-to-alarm "7" \
-	--threshold "500000" \
-	--comparison-operator "LessThanOrEqualToThreshold" \
-	--period "300" \
-	--namespace "AWS/EC2" \
-	--statistic "Average"')
+function createShutdownAlarm (serverName, instanceId) {
+	aws.command('cloudwatch put-metric-alarm '+
+	'--alarm-name "alarm when '+serverName+' server doesnt have anyone online for a time" '+
+	'--alarm-description "Automatically shutoff the server if no one is connected" '+
+	'--metric-name "NetworkOut" '+
+	'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" '+
+	'--dimensions "Name=InstanceId,Value='+instanceId+'" '+
+	'--evaluation-periods "8" '+
+	'--datapoints-to-alarm "7" '+
+	'--threshold "500000" '+
+	'--comparison-operator "LessThanOrEqualToThreshold" '+
+	'--period "300" '+
+	'--namespace "AWS/EC2" '+
+	'--statistic "Average"');
 }
 // creates amazon rules / events to handle backipng up the game server files
-function createBackupEvents (instanceId) {
+function createBackupEvents (serverName, instanceId) {
 	// backup periodically (30min)
-	aws.command("events put-rule \
-		--name 'mcm_periodic_backup' \
-		--schedule-expression 'rate(30 minutes)' \
-		--state 'ENABLED' \
-		--description 'creates a backup periodically'")
+	aws.command("events put-rule "+
+		"--name '"+serverName+"_periodic_backup' "+
+		"--schedule-expression 'rate(30 minutes)' "+
+		"--state 'ENABLED' "+
+		"--description 'creates a backup periodically'")
 	.then(() => {
 		aws.command('events put-targets '+
-		'--rule "mcm_periodic_backup" '+
+		'--rule "'+serverName+'_periodic_backup" '+
 		'--targets '+
 		'"Id"="1",'+
 		'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 		'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + instanceId + ']}}",'+
 		'"RoleArn"="arn:aws:iam::392656794647:role/Cloudwatch_run_commands",'+
-		'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./minecraft_server s3://' + s3BucketName + '/mcm_server --recursive\\\"],'+
+		'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./minecraft_server s3://' + s3BucketName + '/'+serverName+' --recursive\\\"],'+
 		'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 		'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 	});
 
 	// backup on ec2 spot termination
-	aws.command('events put-rule --name "mcm_interrupt_backup" --event-pattern \'{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Spot Instance Interruption Warning\"]}\' --state "ENABLED" --description "creates a backup when the instance terminates"')
+	aws.command('events put-rule --name "'+serverName+'_interrupt_backup" --event-pattern \'{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Spot Instance Interruption Warning\"]}\' --state "ENABLED" --description "creates a backup when the instance terminates"')
 	.then(() => {
 		aws.command('events put-targets '+
-		'--rule "mcm_interrupt_backup" '+
+		'--rule "'+serverName+'_interrupt_backup" '+
 		'--targets '+
 		'"Id"="1",'+
 		'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 		'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + instanceId + ']}}",'+
 		'"RoleArn"="arn:aws:iam::392656794647:role/Cloudwatch_run_commands",'+
-		'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./minecraft_server s3://' + s3BucketName + '/mcm_server --recursive\\\"],'+
+		'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./minecraft_server s3://' + s3BucketName + '/'+serverName+' --recursive\\\"],'+
 		'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 		'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 	});
 }	
 // loads the games files onto the instance and then runs them.
-function startGameServer (instanceId) {
+function startGameServer (serverName, instanceId) {
 	return new Promise(async function(resolve) {
 		while (true) {
 			var check1;
 			var check2;
-			aws.command('ec2 describe-instance-status --instance-ids ${ID} --query "InstanceStatuses[0].InstanceStatus.Status"')
+			aws.command('ec2 describe-instance-status --instance-ids '+instanceId+' --query "InstanceStatuses[0].InstanceStatus.Status"')
 			.then((data) => {
 				check1 = data.object
 			})
-			aws.command('ec2 describe-instance-status --instance-ids ${ID} --query "InstanceStatuses[0].SystemStatus.Status"')
+			aws.command('ec2 describe-instance-status --instance-ids '+instanceId+' --query "InstanceStatuses[0].SystemStatus.Status"')
 			.then((data) => {
 				check2 = data.object
 			})
@@ -194,10 +203,13 @@ function startGameServer (instanceId) {
 				console.log("Server initialized, Installing minecraft server.");
 				aws.command('ssm send-command --document-name "AWS-RunShellScript" '+
 					'--comment "Copy data to S3 as backup / save" '+
-					'--instance-ids ' + instanceId +
-					' --parameters file://mcm_commands.json '+
+					'--instance-ids '+instanceId+' '+
+					'--parameters \'{'+
+						'"commands":["'+startCommands[serverName].commands.join('","')+'"],'+
+						'"executionTimeout":["86400"],'+
+						'"workingDirectory":["/home/ec2-user"]}\' '+
 					'--timeout-seconds 600 '+
-					'--region us-west-2')
+					'--region us-west-2');
 					break;
 			} else {
 				console.log("Initializing... Please wait.");
@@ -207,6 +219,7 @@ function startGameServer (instanceId) {
 		resolve();
 	});
 }
+// checks the server and determines its status then returns it
 function getStatus (instanceId, serverName) {
 	return new Promise(async(resolve, reject) => {
 		if (startInstanceFunctionActive) {
@@ -302,6 +315,7 @@ function checkForServer(serverName) {
 		})
 	});
 }
+
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`
@@ -327,7 +341,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             	} else {
 	            	checkForServer(args[1])
 	            	.then(() => {
-	            		return getIp('mcm_server')
+	            		return getIp(args[1])
 	            	}).then((ip) => {
 	            		bot.sendMessage({
 		                    to: channelID,
@@ -363,9 +377,9 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	            		await sleep(3000); // wait for aws to add the tag name to get an instance id
 	            		return getInstanceId(args[1])
 	            	}).then((instanceId) => {
-						createShutdownAlarm(instanceId);
-	            		createBackupEvents(instanceId);
-	            		return startGameServer(instanceId)
+						createShutdownAlarm(args[1], instanceId);
+	            		createBackupEvents(args[1], instanceId);
+	            		return startGameServer(args[1], instanceId)
             		}).then((resolved) => {
 						bot.sendMessage({
 	            			to: channelID,
