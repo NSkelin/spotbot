@@ -1,9 +1,0 @@
-{
-	"ImageId": "ami-0cb72367e98845d43",
-	"KeyName": "Minecraft_Server",
-	"SecurityGroupIds": [ "sg-07c25fbf12bf2e4a9" ],
-	"InstanceType": "m5.large",
-	"IamInstanceProfile": {
-		"Arn": "arn:aws:iam::392656794647:instance-profile/SSM-Agent"
-	}
-}
