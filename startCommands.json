@@ -1,22 +1,32 @@
 {
-	"mcv": {
+	"minecraft_vanilla": {
 		"instanceType": "m5.large",
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
-			"sudo yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/mcv ./server --recursive",
+			"yum install -y jdk-8u141-linux-x64.rpm",
+			"aws s3 cp s3://mc-server-a00912617/minecraft_vanilla ./server --recursive",
 			"cd server",
-			"sudo java -Xmx1724M -Xms1724M -jar ./server.jar nogui"
+			"java -Xmx1724M -Xms1724M -jar ./server.jar nogui"
 		]
 	},
-	"mcm_server": {
+	"minecraft_cott": {
 		"instanceType": "m5.large",
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
-			"sudo yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/mcm_server ./server --recursive",
+			"yum install -y jdk-8u141-linux-x64.rpm",
+			"aws s3 cp s3://mc-server-a00912617/minecraft_cott ./server --recursive",
 			"cd server",
-			"sudo java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
+			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
+		]
+	},
+	"minecraft_zombiepack": {
+		"instanceType": "m5.large",
+		"commands":[
+			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
+			"yum install -y jdk-8u141-linux-x64.rpm",
+			"aws s3 cp s3://mc-server-a00912617/minecraft_zombiepack ./server --recursive",
+			"cd server",
+			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
 		]
 	}
 }
