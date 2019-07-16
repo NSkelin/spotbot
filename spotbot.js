@@ -186,7 +186,7 @@ function createBackupEvents (serverName, instanceId) {
 	});
 }	
 // loads the games files onto the instance and then runs them.
-function startGameServer (serverName, instanceId) {
+function startServer (serverName, instanceId) {
 	return new Promise(async function(resolve) {
 		while (true) {
 			var check1;
@@ -312,6 +312,37 @@ function checkForServer(serverName) {
 		})
 	});
 }
+// restarts the server on an instance
+function restartServer (serverName) {
+	return new Promise((resolve, reject) => {
+		checkInstanceStatus(serverName)
+		.then((success) => {
+			reject(success)
+			return
+		})
+		.catch((error) => {
+			if (error === "Computer is on but the server isnt!? Try !restart.") {
+				getInstanceId(serverName)
+				.then((instanceId) => {
+					len = startCommands[serverName].commands.length
+					aws.command('ssm send-command --document-name "AWS-RunShellScript" '+
+					'--comment "Copy data to S3 as backup / save" '+
+					'--instance-ids '+instanceId+' '+
+					'--parameters \'{'+
+						'"commands":["'+startCommands[serverName].commands[len-1]+'"],'+
+						'"executionTimeout":["86400"],'+
+						'"workingDirectory":["/home/ec2-user/server"]}\' '+
+					'--timeout-seconds 600 '+
+					'--region us-west-2');
+					resolve("restarting server! Use !status to check if its up. Bye!")
+					return
+				})
+			} else {
+				reject(error)
+			}
+		})
+	})
+}
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`
@@ -375,7 +406,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 	            	}).then((instanceId) => {
 						createShutdownAlarm(args[1], instanceId);
 	            		createBackupEvents(args[1], instanceId);
-	            		return startGameServer(args[1], instanceId)
+	            		return startServer(args[1], instanceId)
             		}).then((resolved) => {
 						bot.sendMessage({
 	            			to: channelID,
@@ -421,10 +452,31 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 		        }
             break;
             case 'restart':
-	            bot.sendMessage({
-	            	to: channelID,
-	            	message: 'yeah i know i havent created this command yet.'
-	            })
+            	if (args[1] === undefined) {
+	        		bot.sendMessage({
+	                    to: channelID,
+	                    message: 'Please enter a server (ex "!status mcm_server") or type "!servers" for a list of servers'
+	            	});
+	        	} else {
+	        		checkForServer(args[1])
+	        		.then(() => {
+			            bot.sendMessage({
+			            	to: channelID,
+			            	message: 'Checking server status first!'
+			            })
+		            	return restartServer(args[1])
+		            }).then((success) => { // note: success is actually error
+		            	bot.sendMessage({
+			            	to: channelID,
+			            	message: success
+		            	})
+		        	}).catch((error) => { // note: error is actually success
+		        		bot.sendMessage({
+			            	to: channelID,
+			            	message: error
+		            	})
+		        	})
+		        }
             break;
             case 'servers':
             	getServers()
