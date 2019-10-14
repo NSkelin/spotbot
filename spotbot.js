@@ -114,7 +114,7 @@ function startInstance (serverName) {
 					'--launch-specification '+
 						'\'{"ImageId": "ami-0cb72367e98845d43",'+
 						'"KeyName": "Minecraft_Server",'+
-						'"SecurityGroupIds": [ "sg-07c25fbf12bf2e4a9" ],'+
+						'"SecurityGroupIds": [ "'+startCommands[serverName].securityGroup+'" ],'+
 						'"InstanceType": "'+startCommands[serverName].instanceType+'",'+
 						'"IamInstanceProfile": {"Arn": "arn:aws:iam::392656794647:instance-profile/SSM-Agent"}}\''
 				);
@@ -143,7 +143,7 @@ function createShutdownAlarm (serverName, instanceId) {
 	'--dimensions "Name=InstanceId,Value='+instanceId+'" '+
 	'--evaluation-periods "8" '+
 	'--datapoints-to-alarm "7" '+
-	'--threshold "500000" '+
+	'--threshold "'+startCommands[serverName].threshold+'" '+
 	'--comparison-operator "LessThanOrEqualToThreshold" '+
 	'--period "300" '+
 	'--namespace "AWS/EC2" '+
@@ -200,7 +200,7 @@ function startServer (serverName, instanceId) {
 				check2 = data.object
 			})
 			if (check1 == "ok" && check2 == "ok") {
-				console.log("Server initialized, Installing minecraft server.");
+				console.log("Server initialized, Installing game server.");
 				aws.command('ssm send-command --document-name "AWS-RunShellScript" '+
 					'--comment "Copy data to S3 as backup / save" '+
 					'--instance-ids '+instanceId+' '+

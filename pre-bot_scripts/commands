@@ -23,7 +23,8 @@ wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-
 sudo yum install -y jdk-8u141-linux-x64.rpm
 
 // run the minecraft server
-java -Xmx6144M -Xms6144M -jar ./minecraft_server/minecraft_server.1.13.jar nogui
+aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-00f4355ca4f5319ca" --parameters '{"commands":["sudo java -Xmx6144M -Xms6144M -jar ./minecraft_server/server.jar nogui"],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user"]}' --timeout-seconds 600 --region us-west-2
+sudo java -Xmx6144M -Xms6144M -jar ./server.jar nogui
 
 // request spot instance
 aws ec2 request-spot-instances --availability-zone-group us-west-2 --instance-count 1 --launch-specification file://specification.json
@@ -40,7 +41,7 @@ aws ec2 terminate-instances --instance-ids <value>
 sudo systemctl restart amazon-ssm-agent
 
 // send command from aws cli to instances
-aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-05c740b57558b86d9" --parameters '{"commands":["aws s3 cp s3://mc-server-a00912617/mcm_server ./minecraft_server --recursive"],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user"]}' --timeout-seconds 600 --region us-west-2
+aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-057e55156b81d5cc9" --parameters '{"commands":["screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt "],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user/server"]}' --timeout-seconds 600 --region us-west-2
 
 // create a tag for the instance
 aws ec2 create-tags --resource ${ID} --tags Key=Name,Value=mcm_server
@@ -50,15 +51,13 @@ aws s3 cp ./minecraft_server s3://mc-server-a00912617/${server_name} --recursive
 
 
 //todo
-console.log errors and instead of making them the users error message
+maybe make start cmd more robust and check if everythings ok (like did the files copy) and if they are try to resolve the problems.
 add color highlights to certain things (ex green:server is ONLINE)
 if it fails to start make it undo all its done (aka kill server etc)
-change server ragion
-make it so json files are not needed
+change server region
 should delete rules alarms /etc on termination
 link server costs somehow - donations?
 if aws credits out do not start server
-stop server if no ones on for x time
 script to download file from s3 to personal computer
 script to upload file from personal computer to s3
 detect if server (pid) is already running on ec2 instance before "restart script" starts a new one
@@ -76,3 +75,10 @@ game list
 	- space engineers
 	- 7 days to die
 	- teraria
+
+
+rules
+startcommands.json
+	- the command to start the server must be the last command
+		- restart command expects this
+		- getinstancestatus expects this
