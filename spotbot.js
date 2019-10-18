@@ -298,7 +298,7 @@ function checkForServer(serverName) {
 		getServers()
 		.then((servers) => {
 			for (i=0; i<servers.length; i++) {
-				if (serverName === servers[i]) {
+				if (serverName === servers[i] || serverName === startCommands[servers[i]].alias) {
 					resolve();
 					return
 				}
@@ -351,7 +351,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     to: channelID,
                     message: 'Hi, Heres the current list of commands:\n'+
                     '!start\n!ip\n!status\n!servers\n!restart\n'+
-                    'Also their are 3 easter egg commands. Can you find them all?'
+                    'Also their are 5 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
@@ -481,7 +481,9 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             		var n = 0
             		for (i=0; i<servers.length; i++) {
             			n += 1
-            			msg += servers[i] + '\t|\t'
+            			msg += servers[i]
+            			msg += ' (' + startCommands[servers[i]].alias + ') '
+            			msg += '\t|\t'
             			if (n === 5) {
             				n = 0
             				msg += '\n'
@@ -510,6 +512,18 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             	bot.sendMessage({
                     to: channelID,
                     message: 'Eunk bwonoes'
+                });
+            break;
+            case 'Oh?':
+            	bot.sendMessage({
+                    to: channelID,
+                    message: "you're walking up to me!?"
+                });
+            break;
+            case 'thx':
+            	bot.sendMessage({
+                    to: channelID,
+                    message: 'butters'
                 });
             break;
      		default:

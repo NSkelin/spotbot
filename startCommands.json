@@ -1,5 +1,6 @@
 {
 	"minecraft_vanilla": {
+		"alias" : "mcv",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -12,6 +13,7 @@
 		]
 	},
 	"minecraft_cott": {
+		"alias" : "cott",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -24,6 +26,7 @@
 		]
 	},
 	"minecraft_zombiepack": {
+		"alias" : "mczp",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -36,6 +39,7 @@
 		]
 	},
 	"terraria_vanilla": {
+		"alias" : "tv",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-09482211132c8309c",
 		"threshold":"200000",
