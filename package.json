@@ -8,8 +8,12 @@
     "discord.io": "^2.5.3",
     "winston": "^3.2.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "node-supervisor": "^1.0.2"
+  },
   "scripts": {
+    "start": "node spotbot.js",
+    "dev": "supervisor spotbot.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nicholas Skelin",
