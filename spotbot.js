@@ -1,6 +1,6 @@
+require('dotenv').config();
 var Discord = require('discord.io');
 var logger = require('winston');
-var auth = require('./auth.json');
 // Configure logger settings
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
@@ -9,13 +9,8 @@ logger.add(new logger.transports.Console, {
 logger.level = 'debug';
 // Initialize Discord Bot
 var bot = new Discord.Client({
-   token: auth.token,
+   token: process.env.TOKEN,
    autorun: true
-});
-bot.on('ready', function (evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
 });
 
 // amazon aws cli setup
@@ -23,13 +18,13 @@ var awsCli = require('aws-cli-js');
 var Options = awsCli.Options;
 var Aws = awsCli.Aws;
 var options = new Options(
-  /* accessKey    */ 'AKIAVW3BLGQL3SVGICX7',
-  /* secretKey    */ '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',
+  /* accessKey    */ process.env.ACCESSKEY,
+  /* secretKey    */ process.env.SECRETKEY,
   /* sessionToken */ null,
   /* currentWorkingDirectory */ null
 );
 var aws = new Aws(options);
-const  s3BucketName = "mc-server-a00912617";
+const  s3BucketName = process.env.FOLDER;
 var startInstanceFunctionActive = false;
 const startCommands = require('./startCommands.json')
 // wait for x milliseconds
@@ -343,6 +338,7 @@ function restartServer (serverName) {
 		})
 	})
 }
+console.log('Spotbot Started.');
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`

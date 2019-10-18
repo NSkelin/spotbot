@@ -41,7 +41,7 @@ aws ec2 terminate-instances --instance-ids <value>
 sudo systemctl restart amazon-ssm-agent
 
 // send command from aws cli to instances
-aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-057e55156b81d5cc9" --parameters '{"commands":["screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt "],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user/server"]}' --timeout-seconds 600 --region us-west-2
+aws ssm send-command --document-name "AWS-RunShellScript" --comment "Copy data to S3 as backup / save" --instance-ids "i-052c6fbe176169b89" --parameters '{"commands":["aws s3 cp s3://mc-server-a00912617/terraria_vanilla ./server --recursive, cd server, sudo chmod +x TerrariaServer.bin.x86_64, sudo screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt "],"executionTimeout":["86400"],"workingDirectory":["/home/ec2-user/server"]}' --timeout-seconds 600 --region us-west-2
 
 // create a tag for the instance
 aws ec2 create-tags --resource ${ID} --tags Key=Name,Value=mcm_server
