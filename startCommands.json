@@ -1,6 +1,7 @@
-{
-	"minecraft_vanilla": {
-		"alias" : "mcv",
+[
+	{	
+		"name": "minecraft_vanilla",
+		"alias": "mcv",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -12,8 +13,9 @@
 			"java -Xmx1724M -Xms1724M -jar ./server.jar nogui"
 		]
 	},
-	"minecraft_cott": {
-		"alias" : "cott",
+	{
+		"name": "minecraft_cott",
+		"alias": "cott",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -25,8 +27,9 @@
 			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
 		]
 	},
-	"minecraft_zombiepack": {
-		"alias" : "mczp",
+	{
+		"name": "minecraft_zombiepack",
+		"alias": "mczp",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
@@ -38,16 +41,17 @@
 			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
 		]
 	},
-	"terraria_vanilla": {
-		"alias" : "tv",
+	{
+		"name": "terraria_vanilla",
+		"alias": "tv",
 		"instanceType": "m5.large",
 		"securityGroup": "sg-09482211132c8309c",
-		"threshold":"200000",
+		"threshold":"250000",
 		"commands":[
 			"aws s3 cp s3://mc-server-a00912617/terraria_vanilla ./server --recursive",
 			"cd server",
-			"sudo chmod +x TerrariaServer.bin.x86_64",
-			"sudo screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt"
+			"chmod +x TerrariaServer.bin.x86_64",
+			"screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt"
 		]
 	}
-}
+]
