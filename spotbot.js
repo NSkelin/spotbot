@@ -84,7 +84,7 @@ function getServerDetails(serverName) {
 				return
 			}
 		}
-		reject('Couldnt find '+ serverName +'try "!servers"');
+		reject('Couldnt find '+ serverName +' try "!servers"');
 	});
 }
 
@@ -306,6 +306,12 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             	bot.sendMessage({
                     to: channelID,
                     message: 'butters'
+                });
+            break;
+            case 'dood':
+            	bot.sendMessage({
+                    to: channelID,
+                    message: 'No way DOOD!'
                 });
             break;
      		default:
