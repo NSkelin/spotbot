@@ -304,8 +304,8 @@ class Server {
 							// var pidId = await this.getRunCommandOutput(this._instanceId, 'pgrep -f \\"'+commandList[i]+'\\"');
 							// work around.
 							var pidId = await this.getRunCommandOutput('ps ax | grep -v grep | grep -i \\"'+commandList[i]+'\\"');
-							var pidId = pidId.split(' ')
-							var pidId = pidId[0];
+							var pidId = pidId.split(' ');
+							var pidId = pidId[1];
 							if (/^\d+$/.test(pidId) && i === commandList.length -1) {
 								var upTime = await this.getRunCommandOutput("ps -o etimes= -p "+pidId);
 								if (upTime > 300) {
@@ -338,7 +338,7 @@ class Server {
 	restartServer () {
 		return new Promise(async(resolve, reject) => {
 			try {
-				status = await checkInstanceStatus();
+				let status = await this.checkInstanceStatus();
 				if (status === "Computer is on but the server isnt!? Try !restart.") {
 					let len = this._startCommands.commands.length
 					aws.command('ssm send-command --document-name "AWS-RunShellScript" '+
