@@ -158,19 +158,41 @@ async function startUp() {
 	}
 }
 
+function sleep (ms) {
+	return new Promise(
+		resolve => setTimeout(resolve, ms)
+	);
+}
+
 startUp();
 app.post('/githubWebhook', async (req, res) => {
+	res.send('ok');
     let sig = "sha1=" + crypto.createHmac('sha1', process.env.GITHUBWEBHOOKSECRET).update(JSON.stringify(req.body)).digest('hex');
-    // check if its master branch
+    let branch = req.body.ref;
     // if secret keys match and the branch is master
-    if (req.headers['x-hub-signature'] === sig) {
+    if (req.headers['x-hub-signature'] === sig && branch === 'refs/heads/master') {
     	githubUpdatePending = true;
     	// if servers init, wait...
-        exec('git pull');
+    	while (true) {
+    		let serverStarting = false;
+    		console.log('searching');
+    		for (let i=0; i < servers.length; i++) {
+	    		let server = servers[i];
+	    		console.log('server status ', server.starting);
+	    		if (server.starting) {
+	    			console.log('Update postponed, '+server.name+ ' is currently initializing');
+	    			await sleep(10000)
+	    			serverStarting = true;
+	    		}
+	    	}
+	    	if(!serverStarting) {
+	    		break;
+	    	}
+    	}
+        // exec('git pull');
         console.log('executing code...');
         process.exit();
     }
-	res.end();
 });
 
 app.listen(process.env.PORT, () => {
@@ -210,14 +232,14 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             case 'start':
         		try {
         			await checkForArg(args[1]);
-        			await getServerDetails(args[1]);
+        			let serverDetails = await getServerDetails(args[1]);
         			bot.sendMessage({
 	        			to: channelID,
 	        			message: 'Acknowledged Captain! Were getting ready...'
 	        		});
 
-	        		let serverDetails = await getServerDetails(args[1]);
 	        		let server = new Server(serverDetails.name, serverDetails);
+            		servers.push(server);
 	        		await server.startInstance();
 	        		bot.sendMessage({
             			to: channelID,
@@ -227,17 +249,17 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
 					server.createShutdownAlarm();
             		server.createBackupEvents();
             		await server.startServer();
-            		servers.push(server);
 					bot.sendMessage({
             			to: channelID,
             			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
     				});
+
     				bot.sendMessage({
             			to: channelID,
             			message: '!ip ' + serverDetails.name
     				});
-    				
         		} catch(err) {
+        			// remove server from servers array
         			bot.sendMessage({
 	        			to: channelID,
 	        			message: err

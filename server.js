@@ -36,6 +36,9 @@ class Server {
 	get status() {
 		return this._status;
 	}
+	get starting() {
+		return this._serverStarting;
+	}
 
 	/**
 	* Waits in milliseconds before returning.
@@ -80,7 +83,6 @@ class Server {
 					this._status = data.object.State.Name
 					aws.command('ec2 create-tags --resource ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
 					await this.sleep(3000); // wait for aws to add the tag name incase.
-					this._serverStarting = false;
 					resolve();
 				} catch(err) {
 					console.log(err);
@@ -242,7 +244,8 @@ class Server {
 								'"workingDirectory":["/home/ec2-user"]}\' '+
 							'--timeout-seconds 600 '+
 							'--region us-west-2');
-							break;
+						this._serverStarting = false;
+						break;
 					} else {
 						console.log("Initializing... Please wait.");
 						await this.sleep(10000);
@@ -250,6 +253,7 @@ class Server {
 				}
 				resolve();
 			} catch (err) {
+				this._serverStarting = false;
 				reject();
 				console.log(err);
 			}
