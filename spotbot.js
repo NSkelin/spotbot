@@ -1,5 +1,5 @@
+//---------- start setup
 require('dotenv').config();
-var Discord = require('discord.io');
 var logger = require('winston');
 // Configure logger settings
 logger.remove(logger.transports.Console);
@@ -7,11 +7,22 @@ logger.add(new logger.transports.Console, {
     colorize: true
 });
 logger.level = 'debug';
+
 // Initialize Discord Bot
-var bot = new Discord.Client({
+const Discord = require('discord.io');
+const bot = new Discord.Client({
    token: process.env.TOKEN,
    autorun: true
 });
+
+// webhook listener setup
+const http = require('http');
+const crypto = require('crypto');
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+const exec = require('child_process').exec;
 
 // amazon aws cli setup
 var awsCli = require('aws-cli-js');
@@ -27,7 +38,11 @@ var aws = new Aws(options);
 const  s3BucketName = process.env.FOLDER;
 const startCommands = require('./startCommands.json')
 const Server = require('./server.js');
+
+//global variables
 var servers = [];
+var githubUpdatePending = false;
+//---------- end setup
 
 /**
 * Returns all server names, which are the names of folders in the server s3 bucket.
@@ -144,6 +159,23 @@ async function startUp() {
 }
 
 startUp();
+app.post('/githubWebhook', async (req, res) => {
+    let sig = "sha1=" + crypto.createHmac('sha1', process.env.GITHUBWEBHOOKSECRET).update(JSON.stringify(req.body)).digest('hex');
+    // check if its master branch
+    // if secret keys match and the branch is master
+    if (req.headers['x-hub-signature'] === sig) {
+    	githubUpdatePending = true;
+    	// if servers init, wait...
+        exec('git pull');
+        console.log('executing code...');
+        process.exit();
+    }
+	res.end();
+});
+
+app.listen(process.env.PORT, () => {
+	console.log('listening for webhooks on port ' + process.env.PORT);
+});
 
 bot.on('message', async(user, userID, channelID, message, evt) => {
     if (message.substring(0, 1) == '!') {
@@ -155,7 +187,7 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
                     to: channelID,
                     message: 'Hi, Heres the current list of commands:\n'+
                     '!start\n!ip\n!status\n!servers\n!restart\n'+
-                    'Also their are 5 easter egg commands. Can you find them all?'
+                    'Also their are 6 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
