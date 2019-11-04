@@ -1,4 +1,4 @@
-//---------- start setup
+//---------- start setup //testchange
 require('dotenv').config();
 var logger = require('winston');
 // Configure logger settings
@@ -42,7 +42,6 @@ const Server = require('./server.js');
 //global variables
 var servers = [];
 var githubUpdatePending = false;
-var repo = process.env.REPOPATH;
 //---------- end setup
 
 /**
@@ -190,7 +189,7 @@ app.post('/githubWebhook', async (req, res) => {
 	    		break;
 	    	}
     	}
-        exec('cd ' + repo + ' && git pull');
+        exec('git pull');
         console.log('executing code...');
         process.exit();
     }
