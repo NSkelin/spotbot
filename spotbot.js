@@ -42,6 +42,7 @@ const Server = require('./server.js');
 //global variables
 var servers = [];
 var githubUpdatePending = false;
+const repo = process.env.REPOPATH;
 //---------- end setup
 
 /**
