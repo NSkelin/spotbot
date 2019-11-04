@@ -181,7 +181,7 @@ app.post('/githubWebhook', async (req, res) => {
 	    		console.log('server status ', server.starting);
 	    		if (server.starting) {
 	    			console.log('Update postponed, '+server.name+ ' is currently initializing');
-	    			await sleep(10000)
+	    			await sleep(60000);
 	    			serverStarting = true;
 	    		}
 	    	}
@@ -189,11 +189,16 @@ app.post('/githubWebhook', async (req, res) => {
 	    		break;
 	    	}
     	}
-        // exec('git pull');
+        exec('git pull');
         console.log('executing code...');
         process.exit();
     }
 });
+
+app.post('/awsWebhook', (req, res) => {
+	console.log('aws');
+	res.send('ok');
+})
 
 app.listen(process.env.PORT, () => {
 	console.log('listening for webhooks on port ' + process.env.PORT);
@@ -231,33 +236,40 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             break;
             case 'start':
         		try {
-        			await checkForArg(args[1]);
-        			let serverDetails = await getServerDetails(args[1]);
-        			bot.sendMessage({
-	        			to: channelID,
-	        			message: 'Acknowledged Captain! Were getting ready...'
-	        		});
+        			if (!githubUpdatePending) {
+	        			await checkForArg(args[1]);
+	        			let serverDetails = await getServerDetails(args[1]);
+	        			bot.sendMessage({
+		        			to: channelID,
+		        			message: 'Acknowledged Captain! Were getting ready...'
+		        		});
 
-	        		let server = new Server(serverDetails.name, serverDetails);
-            		servers.push(server);
-	        		await server.startInstance();
-	        		bot.sendMessage({
-            			to: channelID,
-            			message: 'Computer powering on!...'
-            		});
+		        		let server = new Server(serverDetails.name, serverDetails);
+	            		servers.push(server);
+		        		await server.startInstance();
+		        		bot.sendMessage({
+	            			to: channelID,
+	            			message: 'Computer powering on!...'
+	            		});
 
-					server.createShutdownAlarm();
-            		server.createBackupEvents();
-            		await server.startServer();
-					bot.sendMessage({
-            			to: channelID,
-            			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
-    				});
+						server.createShutdownAlarm();
+	            		server.createBackupEvents();
+	            		await server.startServer();
+						bot.sendMessage({
+	            			to: channelID,
+	            			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
+	    				});
 
-    				bot.sendMessage({
-            			to: channelID,
-            			message: '!ip ' + serverDetails.name
-    				});
+	    				bot.sendMessage({
+	            			to: channelID,
+	            			message: '!ip ' + serverDetails.name
+	    				});
+        			} else {
+        				bot.sendMessage({
+		        			to: channelID,
+		        			message: 'Bot restarting for maintenance soon. Please try again in a few minutes.'
+			        	});
+        			}
         		} catch(err) {
         			// remove server from servers array
         			bot.sendMessage({
