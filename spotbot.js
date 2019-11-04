@@ -42,6 +42,7 @@ const Server = require('./server.js');
 //global variables
 var servers = [];
 var githubUpdatePending = false;
+var repo = process.env.REPOPATH;
 //---------- end setup
 
 /**
@@ -189,7 +190,7 @@ app.post('/githubWebhook', async (req, res) => {
 	    		break;
 	    	}
     	}
-        // exec('git pull');
+        exec('cd ' + repo + ' && git pull');
         console.log('executing code...');
         process.exit();
     }
