@@ -1,5 +1,5 @@
+//---------- start setup
 require('dotenv').config();
-var Discord = require('discord.io');
 var logger = require('winston');
 // Configure logger settings
 logger.remove(logger.transports.Console);
@@ -7,11 +7,22 @@ logger.add(new logger.transports.Console, {
     colorize: true
 });
 logger.level = 'debug';
+
 // Initialize Discord Bot
-var bot = new Discord.Client({
+const Discord = require('discord.io');
+const bot = new Discord.Client({
    token: process.env.TOKEN,
    autorun: true
 });
+
+// webhook listener setup
+const http = require('http');
+const crypto = require('crypto');
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+const exec = require('child_process').exec;
 
 // amazon aws cli setup
 var awsCli = require('aws-cli-js');
@@ -27,7 +38,11 @@ var aws = new Aws(options);
 const  s3BucketName = process.env.FOLDER;
 const startCommands = require('./startCommands.json')
 const Server = require('./server.js');
+
+//global variables
 var servers = [];
+var githubUpdatePending = false;
+//---------- end setup
 
 /**
 * Returns all server names, which are the names of folders in the server s3 bucket.
@@ -84,7 +99,7 @@ function getServerDetails(serverName) {
 				return
 			}
 		}
-		reject('Couldnt find '+ serverName +'try "!servers"');
+		reject('Couldnt find '+ serverName +' try "!servers"');
 	});
 }
 
@@ -143,7 +158,46 @@ async function startUp() {
 	}
 }
 
+function sleep (ms) {
+	return new Promise(
+		resolve => setTimeout(resolve, ms)
+	);
+}
+
 startUp();
+app.post('/githubWebhook', async (req, res) => {
+	res.send('ok');
+    let sig = "sha1=" + crypto.createHmac('sha1', process.env.GITHUBWEBHOOKSECRET).update(JSON.stringify(req.body)).digest('hex');
+    let branch = req.body.ref;
+    // if secret keys match and the branch is master
+    if (req.headers['x-hub-signature'] === sig && branch === 'refs/heads/master') {
+    	githubUpdatePending = true;
+    	// if servers init, wait...
+    	while (true) {
+    		let serverStarting = false;
+    		console.log('searching');
+    		for (let i=0; i < servers.length; i++) {
+	    		let server = servers[i];
+	    		console.log('server status ', server.starting);
+	    		if (server.starting) {
+	    			console.log('Update postponed, '+server.name+ ' is currently initializing');
+	    			await sleep(10000)
+	    			serverStarting = true;
+	    		}
+	    	}
+	    	if(!serverStarting) {
+	    		break;
+	    	}
+    	}
+        // exec('git pull');
+        console.log('executing code...');
+        process.exit();
+    }
+});
+
+app.listen(process.env.PORT, () => {
+	console.log('listening for webhooks on port ' + process.env.PORT);
+});
 
 bot.on('message', async(user, userID, channelID, message, evt) => {
     if (message.substring(0, 1) == '!') {
@@ -155,7 +209,7 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
                     to: channelID,
                     message: 'Hi, Heres the current list of commands:\n'+
                     '!start\n!ip\n!status\n!servers\n!restart\n'+
-                    'Also their are 5 easter egg commands. Can you find them all?'
+                    'Also their are 6 easter egg commands. Can you find them all?'
                 });
         	break;
             case 'ip':
@@ -178,14 +232,14 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             case 'start':
         		try {
         			await checkForArg(args[1]);
-        			await getServerDetails(args[1]);
+        			let serverDetails = await getServerDetails(args[1]);
         			bot.sendMessage({
 	        			to: channelID,
 	        			message: 'Acknowledged Captain! Were getting ready...'
 	        		});
 
-	        		let serverDetails = await getServerDetails(args[1]);
 	        		let server = new Server(serverDetails.name, serverDetails);
+            		servers.push(server);
 	        		await server.startInstance();
 	        		bot.sendMessage({
             			to: channelID,
@@ -195,17 +249,17 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
 					server.createShutdownAlarm();
             		server.createBackupEvents();
             		await server.startServer();
-            		servers.push(server);
 					bot.sendMessage({
             			to: channelID,
             			message: 'Starting the game server now! You should be able to join in a few minutes, have fun!'
     				});
+
     				bot.sendMessage({
             			to: channelID,
             			message: '!ip ' + serverDetails.name
     				});
-    				
         		} catch(err) {
+        			// remove server from servers array
         			bot.sendMessage({
 	        			to: channelID,
 	        			message: err
@@ -306,6 +360,12 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             	bot.sendMessage({
                     to: channelID,
                     message: 'butters'
+                });
+            break;
+            case 'dood':
+            	bot.sendMessage({
+                    to: channelID,
+                    message: 'No way DOOD!'
                 });
             break;
      		default:
