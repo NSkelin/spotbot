@@ -20,7 +20,7 @@ class Server {
 		this._alias = startCommands.alias
 		this._ip = ip;
 		this._status = status;
-		this._startInstanceFunctionActive = false;
+		this._serverStarting = false;
 		this._instanceId = instanceId;
 	}
 
@@ -35,6 +35,9 @@ class Server {
 	}
 	get status() {
 		return this._status;
+	}
+	get starting() {
+		return this._serverStarting;
 	}
 
 	/**
@@ -55,12 +58,12 @@ class Server {
 		return new Promise(async(resolve, reject) => {
 			// figure out queues or someway to only allow one person to run this function at a time
 			// is this function already running? reject if true, else continue
-			if (this._startInstanceFunctionActive) {
+			if (this._serverStarting) {
 				reject('Server is already being started');
 				return
 			} else {
 				try {
-					this._startInstanceFunctionActive = true;
+					this._serverStarting = true;
 					await this.checkInstanceRunning(this._name)
 					// create spot instance and tag it
 					await aws.command('ec2 request-spot-instances '+
@@ -80,11 +83,10 @@ class Server {
 					this._status = data.object.State.Name
 					aws.command('ec2 create-tags --resource ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
 					await this.sleep(3000); // wait for aws to add the tag name incase.
-					this._startInstanceFunctionActive = false;
 					resolve();
 				} catch(err) {
 					console.log(err);
-					this._startInstanceFunctionActive = false;
+					this._serverStarting = false;
 					reject('The computer is already on try !status or !ip');
 				}	
 			}
@@ -242,7 +244,8 @@ class Server {
 								'"workingDirectory":["/home/ec2-user"]}\' '+
 							'--timeout-seconds 600 '+
 							'--region us-west-2');
-							break;
+						this._serverStarting = false;
+						break;
 					} else {
 						console.log("Initializing... Please wait.");
 						await this.sleep(10000);
@@ -250,6 +253,7 @@ class Server {
 				}
 				resolve();
 			} catch (err) {
+				this._serverStarting = false;
 				reject();
 				console.log(err);
 			}
@@ -281,7 +285,7 @@ class Server {
 	checkInstanceStatus () {
 		return new Promise(async(resolve, reject) => {
 			try {
-				if (this._startInstanceFunctionActive) {
+				if (this._serverStarting) {
 					resolve('The "!start" command is active! please wait for it to finish...');
 					return
 				} else {
