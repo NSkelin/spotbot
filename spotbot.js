@@ -189,8 +189,11 @@ app.post('/githubWebhook', async (req, res) => {
 	    		break;
 	    	}
     	}
-        exec('git pull');
-        console.log('executing code...');
+    	console.log('executing code...');
+        exec('git pull', (err, stdout, stderr) => {
+        	console.log('stdout ', stdout);
+        	console.log('stderr ', stderr);
+        });
         process.exit();
     }
 });
