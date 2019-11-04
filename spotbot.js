@@ -164,6 +164,16 @@ function sleep (ms) {
 	);
 }
 
+function runCmd (cmd) {
+	return new Promise((resolve, reject) => {
+		exec(cmd, (err, stdout, stderr) => {
+    		console.log('stdout ', stdout);
+    		console.log('stderr ', stderr);
+    		resolve();
+		});
+	});
+}
+
 startUp();
 app.post('/githubWebhook', async (req, res) => {
 	res.send('ok');
@@ -190,10 +200,7 @@ app.post('/githubWebhook', async (req, res) => {
 	    	}
     	}
     	console.log('executing code...');
-        exec('git pull', (err, stdout, stderr) => {
-        	console.log('stdout ', stdout);
-        	console.log('stderr ', stderr);
-        });
+    	await runCmd('cd '+ repo +' && git pull');
         process.exit();
     }
 });
