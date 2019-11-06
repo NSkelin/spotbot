@@ -18,10 +18,12 @@ const bot = new Discord.Client({
 // webhook listener setup
 const http = require('http');
 const crypto = require('crypto');
+const request = require('request');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
+app.use(bodyParser.text());
 const exec = require('child_process').exec;
 
 // amazon aws cli setup
@@ -186,7 +188,6 @@ app.post('/githubWebhook', async (req, res) => {
     	// if servers init, wait...
     	while (true) {
     		let serverStarting = false;
-    		console.log('searching');
     		for (let i=0; i < servers.length; i++) {
 	    		let server = servers[i];
 	    		console.log('server status ', server.starting);
@@ -200,14 +201,30 @@ app.post('/githubWebhook', async (req, res) => {
 	    		break;
 	    	}
     	}
-    	console.log('executing code...');
     	await runCmd('cd '+ repo +' && git pull');
         process.exit();
     }
 });
 
-app.post('/awsWebhook', (req, res) => {
-	console.log('aws');
+app.post('/awsWebhook', async (req, res) => {
+	var body = JSON.parse(req.body);
+	if (req.headers['x-amz-sns-message-type'] === 'SubscriptionConfirmation') {
+		let URL = body['SubscribeURL'];
+		request(URL, (err, res) => {
+			if (err) {
+				console.log(err);
+			} else if (res.statuscode === 200) {
+				console.log('subscription confirmed');
+			}
+		})
+	} else if (req.headers['x-amz-sns-message-type'] === 'Notification') {
+		let message = JSON.parse(body.Message);
+		let state = message.detail['state'];
+		let instanceId = message.detail['instance-id'];
+		if (state === 'shutting-down') {
+			servers = servers.filter(server => server.instanceId != instanceId);
+		}
+	}
 	res.send('ok');
 })
 

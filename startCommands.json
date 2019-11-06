@@ -67,5 +67,19 @@
 			"chmod +x TerrariaServer.bin.x86_64",
 			"screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt"
 		]
+	},
+	{	
+		"name": "minecraft_pixelmon",
+		"alias": "mcp",
+		"instanceType": "m5.large",
+		"securityGroup": "sg-07c25fbf12bf2e4a9",
+		"threshold":"500000",
+		"commands": [
+			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
+			"yum install -y jdk-8u141-linux-x64.rpm",
+			"aws s3 cp s3://mc-server-a00912617/minecraft_pixelmon ./server --recursive",
+			"cd server",
+			"java -Xmx4096M -Xms4096M -jar ./server.jar nogui"
+		]
 	}
 ]

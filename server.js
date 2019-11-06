@@ -39,6 +39,9 @@ class Server {
 	get starting() {
 		return this._serverStarting;
 	}
+	get instanceId() {
+		return this._instanceId;
+	}
 
 	/**
 	* Waits in milliseconds before returning.
@@ -165,10 +168,11 @@ class Server {
 	*/ 
 	createShutdownAlarm () {
 		aws.command('cloudwatch put-metric-alarm '+
-		'--alarm-name "alarm when '+this._name+' server doesnt have anyone online for a time" '+
-		'--alarm-description "Automatically shutoff the server if no one is connected" '+
+		'--alarm-name "[spotbot] '+this._name+' server, user connectivity check." '+
+		'--alarm-description "If network out is below the threshold for a time(No users are connected),'+
+			' Terminate the EC2 spot instance and send a SNS message to spotbot." '+
 		'--metric-name "NetworkOut" '+
-		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" '+
+		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" "arn:aws:sns:us-west-2:'+process.env.AWSACCOUNTID+':spotbot_server_shutdown" '+
 		'--dimensions "Name=InstanceId,Value='+this._instanceId+'" '+
 		'--evaluation-periods "8" '+
 		'--datapoints-to-alarm "7" '+
@@ -187,13 +191,13 @@ class Server {
 	createBackupEvents () {
 		// backup periodically (30min)
 		aws.command("events put-rule "+
-			"--name '"+this._name+"_periodic_backup' "+
+			"--name 'spotbot_"+this._name+"_periodic_backup' "+
 			"--schedule-expression 'rate(30 minutes)' "+
 			"--state 'ENABLED' "+
 			"--description 'creates a backup periodically'")
 		.then(() => {
 			aws.command('events put-targets '+
-			'--rule "'+this._name+'_periodic_backup" '+
+			'--rule "spotbot_'+this._name+'_periodic_backup" '+
 			'--targets '+
 			'"Id"="1",'+
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
@@ -205,10 +209,14 @@ class Server {
 		});
 
 		// backup on ec2 spot termination
-		aws.command('events put-rule --name "'+this._name+'_interrupt_backup" --event-pattern \'{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Spot Instance Interruption Warning\"]}\' --state "ENABLED" --description "creates a backup when the instance terminates"')
+		aws.command('events put-rule '+
+			'--name "spotbot_'+this._name+'_interrupt_backup" '+
+			'--event-pattern \'{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Spot Instance Interruption Warning\"]}\' '+
+			'--state "ENABLED" '+
+			'--description "creates a backup when the instance terminates"')
 		.then(() => {
 			aws.command('events put-targets '+
-			'--rule "'+this._name+'_interrupt_backup" '+
+			'--rule "spotbot_'+this._name+'_interrupt_backup" '+
 			'--targets '+
 			'"Id"="1",'+
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
@@ -218,6 +226,18 @@ class Server {
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
+		aws.command('events put-rule '+
+			'--name "spotbot_'+this._name+'_sns_trigger" '+
+			'--event-pattern \'{\"source\": [\"aws.ec2\"],\"detail-type\": [\"EC2 Instance State-change Notification\"],\"detail\": {\"state\": [\"shutting-down\"],\"instance-id\": [\"'+this._instanceId+'\"]}}\' '+
+			'--state "ENABLED" '+
+			'--description "send an http sns message to spotbot to notify it of server shutdowns."')
+		.then(() => {
+			aws.command('events put-targets '+
+			'--rule "spotbot_'+this._name+'_sns_trigger" '+
+			'--targets '+
+			'"Id"="1",'+
+			'"Arn"="arn:aws:sns:us-west-2:392656794647:spotbot_server_shutdown"');	
+		})
 	}
 	/**
 	* Runs the commands listed in startcommands.json.
