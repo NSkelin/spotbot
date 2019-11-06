@@ -1,4 +1,4 @@
-//---------- start setup //testchange2
+//---------- start setup //testchange4
 require('dotenv').config();
 var logger = require('winston');
 // Configure logger settings
@@ -44,6 +44,7 @@ const Server = require('./server.js');
 //global variables
 var servers = [];
 var githubUpdatePending = false;
+const repo = process.env.REPOPATH;
 //---------- end setup
 
 /**
