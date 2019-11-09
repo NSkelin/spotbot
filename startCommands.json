@@ -2,7 +2,7 @@
 	{	
 		"name": "minecraft_vanilla",
 		"alias": "mcv",
-		"instanceType": "m5.large",
+		"instanceType": "a1.medium",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
 		"commands": [
@@ -16,7 +16,7 @@
 	{
 		"name": "minecraft_cott",
 		"alias": "cott",
-		"instanceType": "m5.large",
+		"instanceType": "a1.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
 		"commands": [
@@ -24,13 +24,13 @@
 			"yum install -y jdk-8u141-linux-x64.rpm",
 			"aws s3 cp s3://mc-server-a00912617/minecraft_cott ./server --recursive",
 			"cd server",
-			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
+			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
 	},
 	{
 		"name": "minecraft_terrafirmapunk",
 		"alias": "tfp",
-		"instanceType": "m5.large",
+		"instanceType": "a1.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
 		"commands": [
@@ -38,13 +38,13 @@
 			"yum install -y jdk-8u141-linux-x64.rpm",
 			"aws s3 cp s3://mc-server-a00912617/minecraft_terrafirmapunk ./server --recursive",
 			"cd server",
-			"java -Xmx6144M -Xms6144M -jar ./forge-1.7.10-10.13.4.1566-1.7.10-universal.jar nogui"
+			"java -Xmx3072M -Xms3072M -jar ./forge-1.7.10-10.13.4.1566-1.7.10-universal.jar nogui"
 		]
 	},
 	{
 		"name": "minecraft_zombiepack",
 		"alias": "mczp",
-		"instanceType": "m5.large",
+		"instanceType": "a1.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
 		"commands":[
@@ -52,13 +52,13 @@
 			"yum install -y jdk-8u141-linux-x64.rpm",
 			"aws s3 cp s3://mc-server-a00912617/minecraft_zombiepack ./server --recursive",
 			"cd server",
-			"java -Xmx6144M -Xms6144M -jar ./server.jar nogui"
+			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
 	},
 	{
 		"name": "terraria_vanilla",
 		"alias": "tv",
-		"instanceType": "m5.large",
+		"instanceType": "m3.medium",
 		"securityGroup": "sg-09482211132c8309c",
 		"threshold":"25000",
 		"commands":[
@@ -71,7 +71,7 @@
 	{	
 		"name": "minecraft_pixelmon",
 		"alias": "mcp",
-		"instanceType": "m5.large",
+		"instanceType": "a1.large",
 		"securityGroup": "sg-07c25fbf12bf2e4a9",
 		"threshold":"500000",
 		"commands": [
@@ -79,7 +79,6 @@
 			"yum install -y jdk-8u141-linux-x64.rpm",
 			"aws s3 cp s3://mc-server-a00912617/minecraft_pixelmon ./server --recursive",
 			"cd server",
-			"java -Xmx4096M -Xms4096M -jar ./server.jar nogui"
+			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
 	}
-]
