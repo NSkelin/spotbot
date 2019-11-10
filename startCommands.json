@@ -8,7 +8,7 @@
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
 			"yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/minecraft_vanilla ./server --recursive",
+			"aws s3 cp s3://<bucket>/minecraft_vanilla ./server --recursive",
 			"cd server",
 			"java -Xmx1724M -Xms1724M -jar ./server.jar nogui"
 		]
@@ -22,7 +22,7 @@
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
 			"yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/minecraft_cott ./server --recursive",
+			"aws s3 cp s3://<bucket>/minecraft_cott ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
@@ -36,7 +36,7 @@
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
 			"yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/minecraft_terrafirmapunk ./server --recursive",
+			"aws s3 cp s3://<bucket>/minecraft_terrafirmapunk ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./forge-1.7.10-10.13.4.1566-1.7.10-universal.jar nogui"
 		]
@@ -50,7 +50,7 @@
 		"commands":[
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
 			"yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/minecraft_zombiepack ./server --recursive",
+			"aws s3 cp s3://<bucket>/minecraft_zombiepack ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
@@ -62,7 +62,7 @@
 		"securityGroup": "sg-09482211132c8309c",
 		"threshold":"25000",
 		"commands":[
-			"aws s3 cp s3://mc-server-a00912617/terraria_vanilla ./server --recursive",
+			"aws s3 cp s3://<bucket>/terraria_vanilla ./server --recursive",
 			"cd server",
 			"chmod +x TerrariaServer.bin.x86_64",
 			"screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt"
@@ -77,8 +77,9 @@
 		"commands": [
 			"wget --no-check-certificate --no-cookies --header \\\"Cookie: oraclelicense=accept-securebackup-cookie\\\" http://download.oracle.com/otn-pub/java/jdk/8u141-b15/336fa29ff2bb4ef291e347e091f7f4a7/jdk-8u141-linux-x64.rpm",
 			"yum install -y jdk-8u141-linux-x64.rpm",
-			"aws s3 cp s3://mc-server-a00912617/minecraft_pixelmon ./server --recursive",
+			"aws s3 cp s3://<bucket>/minecraft_pixelmon ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
 		]
 	}
+]
