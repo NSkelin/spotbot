@@ -11,7 +11,7 @@ logger.level = 'debug';
 // Initialize Discord Bot
 const Discord = require('discord.io');
 const bot = new Discord.Client({
-   token: process.env.TOKEN,
+   token: process.env.DISCORD_BOT_TOKEN,
    autorun: true
 });
 
@@ -31,20 +31,20 @@ var awsCli = require('aws-cli-js');
 var Options = awsCli.Options;
 var Aws = awsCli.Aws;
 var options = new Options(
-  /* accessKey    */ process.env.ACCESSKEY,
-  /* secretKey    */ process.env.SECRETKEY,
+  /* accessKey    */ process.env.AWS_USER_ACCESS_KEY,
+  /* secretKey    */ process.env.AWS_USER_SECRET_KEY,
   /* sessionToken */ null,
   /* currentWorkingDirectory */ null
 );
 var aws = new Aws(options);
-const  s3BucketName = process.env.FOLDER;
+const  s3BucketName = process.env.AWS_S3_BUCKET_NAME;
 const startCommands = require('./startCommands.json')
 const Server = require('./server.js');
 
 //global variables
 var servers = [];
 var githubUpdatePending = false;
-const repo = process.env.REPOPATH;
+const repo = process.env.REPO_PATH;
 //---------- end setup
 
 /**
@@ -180,7 +180,7 @@ function runCmd (cmd) {
 startUp();
 app.post('/githubWebhook', async (req, res) => {
 	res.send('ok');
-    let sig = "sha1=" + crypto.createHmac('sha1', process.env.GITHUBWEBHOOKSECRET).update(JSON.stringify(req.body)).digest('hex');
+    let sig = "sha1=" + crypto.createHmac('sha1', process.env.GITHUB_REPO_WEBHOOK_SECRET).update(JSON.stringify(req.body)).digest('hex');
     let branch = req.body.ref;
     // if secret keys match and the branch is master
     if (req.headers['x-hub-signature'] === sig && branch === 'refs/heads/master') {
@@ -228,8 +228,8 @@ app.post('/awsWebhook', async (req, res) => {
 	res.send('ok');
 })
 
-app.listen(process.env.PORT, () => {
-	console.log('listening for webhooks on port ' + process.env.PORT);
+app.listen(process.env.SERVER_PORT, () => {
+	console.log('listening for webhooks on port ' + process.env.SERVER_PORT);
 });
 
 bot.on('message', async(user, userID, channelID, message, evt) => {

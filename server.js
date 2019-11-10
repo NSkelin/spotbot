@@ -3,13 +3,13 @@ var awsCli = require('aws-cli-js');
 var Options = awsCli.Options;
 var Aws = awsCli.Aws;
 var options = new Options(
-  /* accessKey    */ process.env.ACCESSKEY,
-  /* secretKey    */ process.env.SECRETKEY,
+  /* accessKey    */ process.env.AWS_USER_ACCESS_KEY,
+  /* secretKey    */ process.env.AWS_USER_SECRET_KEY,
   /* sessionToken */ null,
   /* currentWorkingDirectory */ null
 );
 var aws = new Aws(options);
-const s3BucketName = process.env.FOLDER;
+const s3BucketName = process.env.AWS_S3_BUCKET_NAME;
 // const startCommands = require('./startCommands.json')
 
 // aws may update variables as they change, may need to stop that constant connection later.
@@ -172,7 +172,7 @@ class Server {
 		'--alarm-description "If network out is below the threshold for a time(No users are connected),'+
 			' Terminate the EC2 spot instance and send a SNS message to spotbot." '+
 		'--metric-name "NetworkOut" '+
-		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" "arn:aws:sns:us-west-2:'+process.env.AWSACCOUNTID+':spotbot_server_shutdown" '+
+		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" "arn:aws:sns:us-west-2:'+process.env.AWS_ACCOUNT_ID+':spotbot_server_shutdown" '+
 		'--dimensions "Name=InstanceId,Value='+this._instanceId+'" '+
 		'--evaluation-periods "8" '+
 		'--datapoints-to-alarm "7" '+
