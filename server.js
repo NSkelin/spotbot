@@ -22,19 +22,6 @@ class Server {
 		this._status = status;
 		this._serverStarting = false;
 		this._instanceId = instanceId;
-
-		// replaces any instance with <bucket> with the s3BucketName
-		var commands = startCommands.commands;
-		var newCommands = []
-		for (i=0; i<commands.length; i++) {
-			let command = commands[i].split('<bucket>');
-			if (command.length > 1) {
-				newCommands.push(command[0]+s3BucketName+command[1]);
-			} else {
-				newCommands.push(command[0]);
-			}
-		}
-		startCommands.commands = newCommands;
 	}
 
 	get name() {
@@ -54,6 +41,33 @@ class Server {
 	}
 	get instanceId() {
 		return this._instanceId;
+	}
+
+	init () {
+		return new Promise (() => {
+			// todo
+			// replace all instances of <bucket> in startcommands.commands
+			this._startCommands.commands = replaceBucketName(this._startCommands.commands);
+			if (this._startCommands.backupCommands.length != 0) {
+				this._startCommands.backupCommands = replaceBucketName(this._startCommands.backupCommands);
+			} else {
+				this._startCommands.backupCommands = ['aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete'];
+			}
+		});
+	}
+
+	// replaces any instance with <bucket> with the s3BucketName
+	replaceBucketName (commands) {
+		var filteredCommands = []
+		for (i=0; i<commands.length; i++) {
+			let command = commands[i].split('<bucket>');
+			if (command.length > 1) {
+				filteredCommands.push(command[0]+s3BucketName+command[1]);
+			} else {
+				filteredCommands.push(command[0]);
+			}
+		}
+		resolve(filteredCommands)
 	}
 
 	/**
@@ -216,7 +230,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete\\\"],'+
+			'"Input"=\'\"{\\\"commands\\\": '+this._startCommands.backupCommands+','+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
@@ -235,10 +249,12 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./server s3://'+s3BucketName+'/'+this._name+' --recursive\\\"],'+
+			'"Input"=\'\"{\\\"commands\\\": '+this._startCommands.backupCommands+','+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
+
+		// send and sns message to spotbot when a server shutsdown
 		aws.command('events put-rule '+
 			'--name "spotbot_'+this._name+'_sns_trigger" '+
 			'--event-pattern \'{\"source\": [\"aws.ec2\"],\"detail-type\": [\"EC2 Instance State-change Notification\"],\"detail\": {\"state\": [\"shutting-down\"],\"instance-id\": [\"'+this._instanceId+'\"]}}\' '+

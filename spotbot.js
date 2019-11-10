@@ -274,6 +274,7 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
 
 		        		let server = new Server(serverDetails.name, serverDetails);
 	            		servers.push(server);
+	            		await server.init();
 		        		await server.startInstance();
 		        		bot.sendMessage({
 	            			to: channelID,

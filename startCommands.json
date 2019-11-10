@@ -11,7 +11,8 @@
 			"aws s3 cp s3://<bucket>/minecraft_vanilla ./server --recursive",
 			"cd server",
 			"java -Xmx1724M -Xms1724M -jar ./server.jar nogui"
-		]
+		],
+		"backupCommands": []
 	},
 	{
 		"name": "minecraft_cott",
@@ -25,7 +26,8 @@
 			"aws s3 cp s3://<bucket>/minecraft_cott ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
-		]
+		],
+		"backupCommands": []
 	},
 	{
 		"name": "minecraft_terrafirmapunk",
@@ -39,7 +41,8 @@
 			"aws s3 cp s3://<bucket>/minecraft_terrafirmapunk ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./forge-1.7.10-10.13.4.1566-1.7.10-universal.jar nogui"
-		]
+		],
+		"backupCommands": []
 	},
 	{
 		"name": "minecraft_zombiepack",
@@ -53,7 +56,8 @@
 			"aws s3 cp s3://<bucket>/minecraft_zombiepack ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
-		]
+		],
+		"backupCommands": []
 	},
 	{
 		"name": "terraria_vanilla",
@@ -66,7 +70,8 @@
 			"cd server",
 			"chmod +x TerrariaServer.bin.x86_64",
 			"screen -dm ./TerrariaServer.bin.x86_64 -config serverconfig.txt"
-		]
+		],
+		"backupCommands": []
 	},
 	{	
 		"name": "minecraft_pixelmon",
@@ -80,6 +85,10 @@
 			"aws s3 cp s3://<bucket>/minecraft_pixelmon ./server --recursive",
 			"cd server",
 			"java -Xmx3072M -Xms3072M -jar ./server.jar nogui"
+		],
+		"backupCommands": [
+			"aws s3 sync ./server/world s3://<bucket>/minecraft_pixelmon/world",
+			"aws s3 sync ./server/backups s3://<bucket>/minecraft_pixelmon/backups --delete"
 		]
 	}
 ]
