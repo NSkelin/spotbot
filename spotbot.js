@@ -37,14 +37,14 @@ var options = new Options(
   /* currentWorkingDirectory */ null
 );
 var aws = new Aws(options);
-const  s3BucketName = process.env.AWS_S3_BUCKET_NAME;
-const startCommands = require('./startCommands.json')
-const Server = require('./server.js');
 
 //global variables
+const s3BucketName = process.env.AWS_S3_BUCKET_NAME;
+const startCommands = require('./startCommands.json')
+const Server = require('./server.js');
+const repo = process.env.REPO_PATH;
 var servers = [];
 var githubUpdatePending = false;
-const repo = process.env.REPO_PATH;
 //---------- end setup
 
 /**
