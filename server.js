@@ -22,6 +22,19 @@ class Server {
 		this._status = status;
 		this._serverStarting = false;
 		this._instanceId = instanceId;
+
+		// replaces any instance with <bucket> with the s3BucketName
+		var commands = startCommands.commands;
+		var newCommands = []
+		for (i=0; i<commands.length; i++) {
+			let command = commands[i].split('<bucket>');
+			if (command.length > 1) {
+				newCommands.push(command[0]+s3BucketName+command[1]);
+			} else {
+				newCommands.push(command[0]);
+			}
+		}
+		startCommands.commands = newCommands;
 	}
 
 	get name() {
