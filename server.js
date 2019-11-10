@@ -44,30 +44,31 @@ class Server {
 	}
 
 	init () {
-		return new Promise (() => {
-			// todo
-			// replace all instances of <bucket> in startcommands.commands
-			this._startCommands.commands = replaceBucketName(this._startCommands.commands);
+		return new Promise (async(resolve) => {
+			this._startCommands.commands = await this.replaceBucketName(this._startCommands.commands);
 			if (this._startCommands.backupCommands.length != 0) {
-				this._startCommands.backupCommands = replaceBucketName(this._startCommands.backupCommands);
+				this._startCommands.backupCommands = await this.replaceBucketName(this._startCommands.backupCommands);
 			} else {
 				this._startCommands.backupCommands = ['aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete'];
 			}
+			resolve();
 		});
 	}
 
 	// replaces any instance with <bucket> with the s3BucketName
 	replaceBucketName (commands) {
-		var filteredCommands = []
-		for (i=0; i<commands.length; i++) {
-			let command = commands[i].split('<bucket>');
-			if (command.length > 1) {
-				filteredCommands.push(command[0]+s3BucketName+command[1]);
-			} else {
-				filteredCommands.push(command[0]);
+		return new Promise((resolve) => {
+			var filteredCommands = []
+			for (let i=0; i<commands.length; i++) {
+				let command = commands[i].split('<bucket>');
+				if (command.length > 1) {
+					filteredCommands.push(command[0]+s3BucketName+command[1]);
+				} else {
+					filteredCommands.push(command[0]);
+				}
 			}
-		}
-		resolve(filteredCommands)
+			resolve(filteredCommands);
+		});
 	}
 
 	/**
@@ -230,7 +231,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": '+this._startCommands.backupCommands+','+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
@@ -249,7 +250,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": '+this._startCommands.backupCommands+','+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});

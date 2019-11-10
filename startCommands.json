@@ -90,5 +90,19 @@
 			"aws s3 sync ./server/world s3://<bucket>/minecraft_pixelmon/world",
 			"aws s3 sync ./server/backups s3://<bucket>/minecraft_pixelmon/backups --delete"
 		]
+	},
+	{	
+		"name": "test_server",
+		"alias": "ts",
+		"instanceType": "t3a.nano",
+		"securityGroup": ["sg-0d1c5636e77c63261"],
+		"threshold":"25000",
+		"commands": [
+			"aws s3 cp s3://<bucket>/test_server ./server --recursive"
+		],
+		"backupCommands": [
+			"aws s3 sync ./server s3://<bucket>/test_server/world",
+			"aws s3 sync ./server s3://<bucket>/test_server/backups --delete"
+		]
 	}
 ]
