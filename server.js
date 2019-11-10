@@ -203,7 +203,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::392656794647:role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./server s3://' + s3BucketName + '/'+this._name+' --recursive\\\"],'+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 sync ./server s3://' + s3BucketName + '/'+this._name+' --delete\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
