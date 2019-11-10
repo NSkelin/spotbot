@@ -103,7 +103,7 @@ class Server {
 						'--launch-specification '+
 							'\'{"ImageId": "ami-0cb72367e98845d43",'+
 							'"KeyName": "Minecraft_Server",'+
-							'"SecurityGroupIds": [ "'+this._startCommands.securityGroup+'" ],'+
+							'"SecurityGroupIds": ["'+this._startCommands.securityGroups.join('","')+'"],'+
 							'"InstanceType": "'+this._startCommands.instanceType+'",'+
 							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\'');
 					await this.sleep(3500); // Wait for amazon to start instance.
