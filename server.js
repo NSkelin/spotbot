@@ -3,14 +3,14 @@ var awsCli = require('aws-cli-js');
 var Options = awsCli.Options;
 var Aws = awsCli.Aws;
 var options = new Options(
-  /* accessKey    */ process.env.ACCESSKEY,
-  /* secretKey    */ process.env.SECRETKEY,
+  /* accessKey    */ process.env.AWS_USER_ACCESS_KEY,
+  /* secretKey    */ process.env.AWS_USER_SECRET_KEY,
   /* sessionToken */ null,
   /* currentWorkingDirectory */ null
 );
 var aws = new Aws(options);
-const s3BucketName = process.env.FOLDER;
-// const startCommands = require('./startCommands.json')
+const s3BucketName = process.env.AWS_S3_BUCKET_NAME;
+const accountId = process.env.AWS_ACCOUNT_ID;
 
 // aws may update variables as they change, may need to stop that constant connection later.
 class Server {
@@ -41,6 +41,34 @@ class Server {
 	}
 	get instanceId() {
 		return this._instanceId;
+	}
+
+	init () {
+		return new Promise (async(resolve) => {
+			this._startCommands.commands = await this.replaceBucketName(this._startCommands.commands);
+			if (this._startCommands.backupCommands.length != 0) {
+				this._startCommands.backupCommands = await this.replaceBucketName(this._startCommands.backupCommands);
+			} else {
+				this._startCommands.backupCommands = ['aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete'];
+			}
+			resolve();
+		});
+	}
+
+	// replaces any instance with <bucket> with the s3BucketName
+	replaceBucketName (commands) {
+		return new Promise((resolve) => {
+			var filteredCommands = []
+			for (let i=0; i<commands.length; i++) {
+				let command = commands[i].split('<bucket>');
+				if (command.length > 1) {
+					filteredCommands.push(command[0]+s3BucketName+command[1]);
+				} else {
+					filteredCommands.push(command[0]);
+				}
+			}
+			resolve(filteredCommands);
+		});
 	}
 
 	/**
@@ -75,9 +103,9 @@ class Server {
 						'--launch-specification '+
 							'\'{"ImageId": "ami-0cb72367e98845d43",'+
 							'"KeyName": "Minecraft_Server",'+
-							'"SecurityGroupIds": [ "'+this._startCommands.securityGroup+'" ],'+
+							'"SecurityGroupIds": ["'+this._startCommands.securityGroups.join('","')+'"],'+
 							'"InstanceType": "'+this._startCommands.instanceType+'",'+
-							'"IamInstanceProfile": {"Arn": "arn:aws:iam::392656794647:instance-profile/SSM-Agent"}}\'');
+							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\'');
 					await this.sleep(3500); // Wait for amazon to start instance.
 					var data = await aws.command('ec2 describe-instances '+
 						'--filter "Name=instance-state-name,Values=pending" '+
@@ -172,7 +200,7 @@ class Server {
 		'--alarm-description "If network out is below the threshold for a time(No users are connected),'+
 			' Terminate the EC2 spot instance and send a SNS message to spotbot." '+
 		'--metric-name "NetworkOut" '+
-		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" "arn:aws:sns:us-west-2:'+process.env.AWSACCOUNTID+':spotbot_server_shutdown" '+
+		'--alarm-actions "arn:aws:automate:us-west-2:ec2:terminate" "arn:aws:sns:us-west-2:'+accountId+':spotbot_server_shutdown" '+
 		'--dimensions "Name=InstanceId,Value='+this._instanceId+'" '+
 		'--evaluation-periods "8" '+
 		'--datapoints-to-alarm "7" '+
@@ -202,8 +230,8 @@ class Server {
 			'"Id"="1",'+
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
-			'"RoleArn"="arn:aws:iam::392656794647:role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./server s3://' + s3BucketName + '/'+this._name+' --recursive\\\"],'+
+			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
@@ -221,11 +249,13 @@ class Server {
 			'"Id"="1",'+
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
-			'"RoleArn"="arn:aws:iam::392656794647:role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"aws s3 cp ./server s3://' + s3BucketName + '/'+this._name+' --recursive\\\"],'+
+			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
+
+		// send and sns message to spotbot when a server shutsdown
 		aws.command('events put-rule '+
 			'--name "spotbot_'+this._name+'_sns_trigger" '+
 			'--event-pattern \'{\"source\": [\"aws.ec2\"],\"detail-type\": [\"EC2 Instance State-change Notification\"],\"detail\": {\"state\": [\"shutting-down\"],\"instance-id\": [\"'+this._instanceId+'\"]}}\' '+
@@ -236,7 +266,7 @@ class Server {
 			'--rule "spotbot_'+this._name+'_sns_trigger" '+
 			'--targets '+
 			'"Id"="1",'+
-			'"Arn"="arn:aws:sns:us-west-2:392656794647:spotbot_server_shutdown"');	
+			'"Arn"="arn:aws:sns:us-west-2:'+accountId+':spotbot_server_shutdown"');	
 		})
 	}
 	/**

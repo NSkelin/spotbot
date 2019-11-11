@@ -1,6 +1,6 @@
 {
   "name": "spotbot",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "SpotBot integrates amazon web services to help you easily create and host a personal game server for you and your friends!",
   "main": "spotbot.js",
   "dependencies": {
