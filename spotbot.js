@@ -238,12 +238,85 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
         var command = args[0];
         switch(command) {
         	case 'help':
-        		bot.sendMessage({
-                    to: channelID,
-                    message: 'Hi, Heres the current list of commands:\n'+
-                    '!start\n!ip\n!status\n!servers\n!restart\n'+
-                    'Also their are 6 easter egg commands. Can you find them all?'
-                });
+        		if (args[1]) {
+        			switch(args[1]) {
+        				case'servers':
+        					bot.sendMessage({
+		                    	to: channelID,
+		                    	message: '__**Command:**__\n!servers\n\n__**Description:**__\nWill display the name and alias '+
+		                    	'of every server we currently offer into an easy to read format such as:\n\n'+
+		                    	'|  server name 1 (sn1) |  server name 2 (sn2) |\n\n'+
+		                    	'You can then use either the name (in this case "server name 1" or "server name 2") '+
+		                    	'or the alias (in this case, "sn1" or "sn2") with any command that requires "<servername>".'
+		                	});
+        				break;
+        				case'start':
+        					bot.sendMessage({
+		                    	to: channelID,
+		                    	message: '__**Command:**__\n!start <servername>\n\n__**Parameters:**__\n<servername> - '+
+		                    	'Name or alias of the server.\n\n__**Examples:**__\n!start minecraft_vanilla\n!start mcv\n\n'+
+		                    	'__**Description:**__\n'+
+		                    	'Starts a server depending on the server name/alias you put inside "<servername>". '+
+		                    	'For example, if you put "!start minecraft_vanilla" a minecraft vanilla server will begin to start up '+
+		                    	'(use "!servers" For a list of the available servers). Any running server will automatically create '+
+		                    	'a backup every 30 minutes. The server will also automatically shut off if no one has been connected for '+
+		                    	'the past 40 minutes.\n\nAfter you start a server, spotbot will '+
+		                    	'periodically update you with the servers status as its starting up. Secondly you will be unable to start '+
+		                    	'another server until the current one is offline.'
+		                	});
+        				break;
+        				case'ip':
+        					bot.sendMessage({
+		                    	to: channelID,
+		                    	message: '__**Command:**__\n!ip <servername>\n\n__**Parameters:**__\n<servername> - Name or alias of '+
+		                    	'the server.\n\n__**Examples:**__\n!ip minecraft_vanilla\n!ip mcv\n\n__**Description:**__\n'+
+		                    	'This command displays the ip of the server with the name/alias entered in <servername>. If the server '+
+		                    	'isnt on, you will get a message such as "server not up!". You can use the ip to connect to the server '+
+		                    	'(as long as it is currently running and '+
+		                    	'finished starting). Use "!status <servername>" to find out if the server is ready.'
+		                	});
+        				break;
+        				case'status':
+        				    bot.sendMessage({
+		                    	to: channelID,
+		                    	message: '**Description:**\n*Tells you the status of a server.*\n\n'+
+		                    	'**Command:**\n!status <servername>\n\n**Parameters:**\n<servername> - Name or alias '+
+		                    	'of the server.\n\n**Examples:**\n!status minecraft_vanilla\n!status mcv\n\n**Details:**\n'+
+		                    	'This command will find and then displays the status of the server. Specifically it will find '+
+		                    	'if the computer is on, is the computer starting, is the server on, or is the server starting. '+
+		                    	'After this is done it will then tell you the status based on its findings.'
+		                	});
+        				break;
+        				case'restart':
+        					bot.sendMessage({
+		                    	to: channelID,
+		                    	message: '__**Command:**__\n!restart <servername>\n\n__**Parameters:**__\n<servername> - Name or alias '+
+		                    	'of the server.\n\n__**Examples:**__\n!restart minecraft_vanilla\n!restart mcv\n\n'+
+		                    	'!restart mcv\n__**Description:**__\n'+
+		                    	'This command attempts to restart the server after checking if it is offline. It doesnt not check after '+
+		                    	'restarting to see if the server is up. Use !status <servername> instead.'
+		                	});
+        				break;
+        				default:
+        					bot.sendMessage({
+		                    	to: channelID,
+		                    	message: 'Error, unknown parameter, try one of these:\n'+
+		                    	'!help servers\n!help start\n!help ip\n!help status\n!help restart\n'
+		                	});
+        				break;
+        			}
+        		} else {
+        			bot.sendMessage({
+                    	to: channelID,
+                    	message: 'Hi, Heres the current list of commands:\n'+
+                    	'!help <command>\n!servers\n!start <servername>\n!ip <servername>\n!status <servername>\n!restart <servername>\n'+
+                    	'Also their are 6 easter egg commands. Can you find them all?\n'+
+                    	'in <>, such as <servername> are variables. In these you must put in what is asked, for example, !start <servername>'+
+                    	' can be "!start minecraft_vanilla"\n\n'+
+                    	'If you want to know more about a specific command you can also type "!help <command>".'
+                    	+'Where "<command>" is you would put the name of the command you want help with, for example "!help start".'
+                	});
+        		}
         	break;
             case 'ip':
             	// if there is no input besides !ip then tell the user to enter a game
