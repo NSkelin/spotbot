@@ -97,22 +97,14 @@ class Server {
 					this._serverStarting = true;
 					await this.checkInstanceRunning(this._name)
 					// create spot instance and tag it
-					await aws.command('ec2 request-spot-instances '+
-						'--availability-zone-group us-west-2 '+
-						'--instance-count 1 '+
-						'--launch-specification '+
-							'\'{"ImageId": "ami-0cb72367e98845d43",'+
-							'"KeyName": "Minecraft_Server",'+
-							'"SecurityGroupIds": ["'+this._startCommands.securityGroups.join('","')+'"],'+
-							'"InstanceType": "'+this._startCommands.instanceType+'",'+
-							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\'');
+					var requestId = await this.requestSpotInstance();
 					await this.sleep(3500); // Wait for amazon to start instance.
 					var data = await aws.command('ec2 describe-instances '+
 						'--filter "Name=instance-state-name,Values=pending" '+
 						'--query "Reservations[0].Instances[0]"');
 					this._instanceId = data.object.InstanceId
 					this._status = data.object.State.Name
-					aws.command('ec2 create-tags --resource ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
+					await tagInstance();
 					await this.sleep(3000); // wait for aws to add the tag name incase.
 					resolve();
 				} catch(err) {
@@ -123,6 +115,40 @@ class Server {
 			}
 		});
 	}
+
+	requestSpotInstance() {
+		return new Promise (async(resolve, reject) => {
+			try {
+				var request = await aws.command(
+					'ec2 request-spot-instances '+
+						'--availability-zone-group us-west-2 '+
+						'--instance-count 1 '+
+						'--launch-specification '+
+							'\'{"ImageId": "ami-0cb72367e98845d43",'+
+							'"KeyName": "Minecraft_Server",'+
+							'"SecurityGroupIds": ["'+this._startCommands.securityGroups.join('","')+'"],'+
+							'"InstanceType": "'+this._startCommands.instanceType+'",'+
+							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\''
+				);
+				let requestId = request.object.SpotInstanceRequest[0].SpotInstanceRequestId
+				resolve(requestId);
+			} catch(err) {
+				reject(err);
+			}
+		});
+	}
+
+	tagInstance() {
+		return new Promise(async(resolve, reject) => {
+			try {
+				await aws.command('ec2 create-tags --resource ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
+				resolve();
+			}catch(err) {
+				reject(err);
+			}
+		});
+	}
+
 	/**
 	* Returns the public ipv4 of a server.
 	* @param {string} serverName - the tag name of the server.
