@@ -99,12 +99,8 @@ class Server {
 					// create spot instance and tag it
 					var requestId = await this.requestSpotInstance();
 					await this.sleep(3500); // Wait for amazon to start instance.
-					var data = await aws.command('ec2 describe-instances '+
-						'--filter "Name=instance-state-name,Values=pending" '+
-						'--query "Reservations[0].Instances[0]"');
-					this._instanceId = data.object.InstanceId
-					this._status = data.object.State.Name
-					await tagInstance();
+					this._instanceId = await this.getInstanceId(requestId);
+					await this.tagInstance();
 					await this.sleep(3000); // wait for aws to add the tag name incase.
 					resolve();
 				} catch(err) {
@@ -130,7 +126,7 @@ class Server {
 							'"InstanceType": "'+this._startCommands.instanceType+'",'+
 							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\''
 				);
-				let requestId = request.object.SpotInstanceRequest[0].SpotInstanceRequestId
+				let requestId = request.object.SpotInstanceRequests[0].SpotInstanceRequestId
 				resolve(requestId);
 			} catch(err) {
 				reject(err);
@@ -167,22 +163,19 @@ class Server {
 		})
 	}
 	/**
-	* Returns an instance id based on the tag name.
-	* @param {string} serverName - The tag name of the server.
+	* Returns a spot instances ID using a spot request ID.
+	* @param {string} requestId - id of the spot request.
 	*/ 
-	getInstanceId () {
-		return new Promise((resolve, reject) => {
-			aws.command('ec2 describe-instances '+
-			'--filter "Name=tag:Name,Values=' + this._name +
-			'" --query "Reservations[0].Instances[0].InstanceId"')
-			.then(async (instanceId) => {
-				if (instanceId.object === null) {
-					reject('The computer isnt on, try !start.');
-				} else {
-					resolve(instanceId.object);
-				}
-			});
-		})
+	getInstanceId (requestId) {
+		return new Promise(async(resolve, reject) => {
+			try {
+				var spotRequest = await aws.command('ec2 describe-spot-instance-requests --spot-instance-request-ids "'+requestId+'"');
+				console.log(spotRequest.object.SpotInstanceRequests[0].InstanceId);
+				resolve(spotRequest.object.SpotInstanceRequests[0].InstanceId);
+			} catch(err) {
+				reject(err);
+			}
+		});
 	}
 	/**
 	* Checks if an instance's state is "running".
@@ -197,8 +190,7 @@ class Server {
 				if (serverStatus.object != null) {
 					var state = serverStatus.object.Instances[0].State.Name
 					if (state === "shutting-down" || state === "terminated") {
-						let instanceId = await this.getInstanceId();
-						aws.command('ec2 delete-tags --resources ' + instanceId + ' --tags Key=Name,Value=' + this._name);
+						aws.command('ec2 delete-tags --resources ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
 						resolve();
 						return
 					} else {
