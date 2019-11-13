@@ -95,8 +95,7 @@ class Server {
 			} else {
 				try {
 					this._serverStarting = true;
-					await this.checkInstanceRunning(this._name)
-					// create spot instance and tag it
+					await this.checkInstanceRunning(this._name);
 					var requestId = await this.requestSpotInstance();
 					await this.sleep(3500); // Wait for amazon to start instance.
 					this._instanceId = await this.getInstanceId(requestId);
@@ -145,6 +144,15 @@ class Server {
 		});
 	}
 
+	untagInstance() {
+		return new Promise(async(resolve, reject) => {
+			try {
+				aws.command('ec2 delete-tags --resources ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
+			} catch(err) {
+				reject(err);
+			}
+		})
+	}
 	/**
 	* Returns the public ipv4 of a server.
 	* @param {string} serverName - the tag name of the server.
@@ -152,9 +160,8 @@ class Server {
 	*/
 	getIp () {
 		return new Promise(async(resolve, reject) => {
-			var publicIpv4 = await aws.command('ec2 describe-instances '+
-				'--filter "Name=tag:Name,Values=' + this._name + '" '+
-				'--query "Reservations[0].Instances[0].PublicIpAddress"')
+			var instanceDetails = await getInstanceDetails();
+			var publicIpv4 = instanceDetails.Instances[0].PublicIpAddress;
 			if (publicIpv4.object === null) {
 				reject('We couldnt find an IP! the server probably isnt up, so try !start or !status');
 			} else {
@@ -162,6 +169,21 @@ class Server {
 			}
 		})
 	}
+
+	getInstanceDetails() {
+		return new Promise(async(resolve, reject) => {
+			try {
+				var instanceDetails = await aws.command(
+					'ec2 describe-instances '+
+						'--filter "Name=tag:Name,Values=' + this._name + '" '+
+						'--query Reservations[0]');
+				resolve(instanceDetails.object);
+			} catch(err) {
+				reject(err);
+			}
+		});
+	}
+
 	/**
 	* Returns a spot instances ID using a spot request ID.
 	* @param {string} requestId - id of the spot request.
@@ -170,7 +192,6 @@ class Server {
 		return new Promise(async(resolve, reject) => {
 			try {
 				var spotRequest = await aws.command('ec2 describe-spot-instance-requests --spot-instance-request-ids "'+requestId+'"');
-				console.log(spotRequest.object.SpotInstanceRequests[0].InstanceId);
 				resolve(spotRequest.object.SpotInstanceRequests[0].InstanceId);
 			} catch(err) {
 				reject(err);
@@ -184,13 +205,11 @@ class Server {
 	checkInstanceRunning () {
 		return new Promise(async(resolve, reject) => {
 			try {
-				let serverStatus = await aws.command('ec2 describe-instances --filter "Name=tag:Name,Values=' + this._name + '" --query Reservations[0]')
-				// checks if the instance with this._name exists. If it does but is terminated or shutting down it removes the servers 
-				//tag name (this._name)
-				if (serverStatus.object != null) {
-					var state = serverStatus.object.Instances[0].State.Name
+				let serverStatus = await getInstanceDetails();
+				if (serverStatus != null) {
+					var state = serverStatus.Instances[0].State.Name
 					if (state === "shutting-down" || state === "terminated") {
-						aws.command('ec2 delete-tags --resources ' + this._instanceId + ' --tags Key=Name,Value=' + this._name);
+						await this.untagInstance();
 						resolve();
 						return
 					} else {
