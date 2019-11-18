@@ -40,7 +40,7 @@ var aws = new Aws(options);
 
 //global variables
 const s3BucketName = process.env.AWS_S3_BUCKET_NAME;
-const startCommands = require('./startCommands.json')
+const serverParameters = require('./serverParameters.json')
 const Server = require('./server.js');
 const repo = process.env.REPO_PATH;
 var servers = [];
@@ -96,9 +96,9 @@ function getServer(serverName) {
 // gets server config from server details file
 function getServerDetails(serverName) {
 	return new Promise((resolve,reject) => {
-		for(let i=0; i<startCommands.length; i++) {
-			if (serverName=== startCommands[i].name || serverName === startCommands[i].alias) {
-				resolve(startCommands[i]);
+		for(let i=0; i<serverParameters.length; i++) {
+			if (serverName=== serverParameters[i].name || serverName === serverParameters[i].alias) {
+				resolve(serverParameters[i]);
 				return
 			}
 		}
@@ -115,7 +115,7 @@ async function getRunningInstances() {
 	for (let i=0; i<instances.length; i++) {
 		var instance = instances[i].Instances[0];
 		var tags = instance.Tags;
-		//check if the instance name matchs any json in startCommands.
+		//check if the instance name matchs any json in serverParameters.
 		if(tags === undefined) {continue}
 		for (let n=0; n<tags.length; n++) {
 			if (tags[n].Key === 'Name') {
@@ -354,9 +354,9 @@ bot.on('message', async(user, userID, channelID, message, evt) => {
             case 'servers':
             	let msg = '';
             	let n = 0;
-	            for (let i=0; i<startCommands.length; i++) {
-	            	let name = startCommands[i].name;
-	            	let alias = startCommands[i].alias;
+	            for (let i=0; i<serverParameters.length; i++) {
+	            	let name = serverParameters[i].name;
+	            	let alias = serverParameters[i].alias;
 
 	            	msg += name
         			msg += ' (' + alias + ') '

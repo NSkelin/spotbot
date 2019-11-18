@@ -14,10 +14,10 @@ const accountId = process.env.AWS_ACCOUNT_ID;
 
 // aws may update variables as they change, may need to stop that constant connection later.
 class Server {
-	constructor(serverName, startCommands, ip=null, status=null, instanceId=null) {
+	constructor(serverName, serverParameters, ip=null, status=null, instanceId=null) {
 		this._name = serverName;
-		this._startCommands = startCommands;
-		this._alias = startCommands.alias
+		this._serverParameters = serverParameters;
+		this._alias = serverParameters.alias
 		this._ip = ip;
 		this._status = status;
 		this._serverStarting = false;
@@ -45,11 +45,11 @@ class Server {
 
 	init () {
 		return new Promise (async(resolve) => {
-			this._startCommands.commands = await this.replaceBucketName(this._startCommands.commands);
-			if (this._startCommands.backupCommands.length != 0) {
-				this._startCommands.backupCommands = await this.replaceBucketName(this._startCommands.backupCommands);
+			this._serverParameters.startCommands = await this.replaceBucketName(this._serverParameters.startCommands);
+			if (this._serverParameters.backupCommands.length != 0) {
+				this._serverParameters.backupCommands = await this.replaceBucketName(this._serverParameters.backupCommands);
 			} else {
-				this._startCommands.backupCommands = ['aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete'];
+				this._serverParameters.backupCommands = ['aws s3 sync ./server s3://'+s3BucketName+'/'+this._name+' --delete'];
 			}
 			resolve();
 		});
@@ -121,8 +121,8 @@ class Server {
 						'--launch-specification '+
 							'\'{"ImageId": "ami-0cb72367e98845d43",'+
 							'"KeyName": "Minecraft_Server",'+
-							'"SecurityGroupIds": ["'+this._startCommands.securityGroups.join('","')+'"],'+
-							'"InstanceType": "'+this._startCommands.instanceType+'",'+
+							'"SecurityGroupIds": ["'+this._serverParameters.securityGroups.join('","')+'"],'+
+							'"InstanceType": "'+this._serverParameters.instanceType+'",'+
 							'"IamInstanceProfile": {"Arn": "arn:aws:iam::'+accountId+':instance-profile/SSM-Agent"}}\''
 				);
 				let requestId = request.object.SpotInstanceRequests[0].SpotInstanceRequestId
@@ -241,7 +241,7 @@ class Server {
 		'--dimensions "Name=InstanceId,Value='+this._instanceId+'" '+
 		'--evaluation-periods "8" '+
 		'--datapoints-to-alarm "7" '+
-		'--threshold "'+this._startCommands.threshold+'" '+
+		'--threshold "'+this._serverParameters.threshold+'" '+
 		'--comparison-operator "LessThanOrEqualToThreshold" '+
 		'--period "300" '+
 		'--namespace "AWS/EC2" '+
@@ -268,7 +268,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._serverParameters.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
@@ -287,7 +287,7 @@ class Server {
 			'"Arn"="arn:aws:ssm:us-west-2::document/AWS-RunShellScript",'+
 			'"RunCommandParameters"="{RunCommandTargets={Key=InstanceIds,Values=[' + this._instanceId + ']}}",'+
 			'"RoleArn"="arn:aws:iam::'+accountId+':role/Cloudwatch_run_commands",'+
-			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._startCommands.backupCommands.join('\\\",\\\"')+'\\\"],'+
+			'"Input"=\'\"{\\\"commands\\\": [\\\"'+this._serverParameters.backupCommands.join('\\\",\\\"')+'\\\"],'+
 			'\\\"workingDirectory\\\": [\\\"/home/ec2-user\\\"],'+
 			'\\\"executionTimeout\\\": [\\\"3600\\\"]}\"\'');
 		});
@@ -307,7 +307,7 @@ class Server {
 		})
 	}
 	/**
-	* Runs the commands listed in startcommands.json.
+	* Runs the commands listed in serverParameters.json.
 	* @param {string} serverName - The tag name of the server.
 	* @param {string} instanceId - the instanceId of the server.
 	*/ 
@@ -326,7 +326,7 @@ class Server {
 							'--comment "Copy data to S3 as backup / save" '+
 							'--instance-ids '+this._instanceId+' '+
 							'--parameters \'{'+
-								'"commands":["'+this._startCommands.commands.join('","')+'"],'+
+								'"commands":["'+this._serverParameters.startCommands.join('","')+'"],'+
 								'"executionTimeout":["86400"],'+
 								'"workingDirectory":["/home/ec2-user"]}\' '+
 							'--timeout-seconds 600 '+
@@ -389,7 +389,7 @@ class Server {
 						resolve('Computer is starting... Please wait.');
 						return
 					} else {
-						var commandList = this._startCommands.commands;
+						var commandList = this._serverParameters.startCommands;
 						for (i=0; i < commandList.length; i++) {
 							// pgrep is case sensitive.
 							// var pidId = await this.getRunCommandOutput(this._instanceId, 'pgrep -f \\"'+commandList[i]+'\\"');
@@ -423,7 +423,7 @@ class Server {
 		});
 	}
 	/**
-	* Runs the last command in startCommands.json on the instance.
+	* Runs the last command in serverParameters.json on the instance.
 	* @param {string} serverName - The tag name of the server.
 	*/ 
 	restartServer () {
@@ -431,12 +431,12 @@ class Server {
 			try {
 				let status = await this.checkInstanceStatus();
 				if (status === "Computer is on but the server isnt!? Try !restart.") {
-					let len = this._startCommands.commands.length
+					let len = this._serverParameters.startCommands.length
 					aws.command('ssm send-command --document-name "AWS-RunShellScript" '+
 					'--comment "Copy data to S3 as backup / save" '+
 					'--instance-ids '+this._instanceId+' '+
 					'--parameters \'{'+
-						'"commands":["'+this._startCommands.commands[len-1]+'"],'+
+						'"commands":["'+this._serverParameters.startCommands[len-1]+'"],'+
 						'"executionTimeout":["86400"],'+
 						'"workingDirectory":["/home/ec2-user/server"]}\' '+
 					'--timeout-seconds 600 '+
